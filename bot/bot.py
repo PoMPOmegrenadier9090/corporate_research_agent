@@ -20,8 +20,6 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:
         return
-    await message.channel.send("おはよー！！！カンカンカン！！！起きて！！！朝だよ！！！！すごい朝！！！！外が明るい！！カンカンカンカンカン！！！！！おはよ！！カンカンカン！！！見て見て！！！！外明るいの！！！外！！！！見て！！カンカンカンカンカン！！起きて！！早く起きて！！カンカン！")
-    return 
 
     # Trigger with !gemini
     if message.content.startswith('!gemini '):

@@ -1,0 +1,15 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "ui": {
+    "theme": "Default Light"
+  },
+  "experimental": {
+    "adk": {
+      "agentSessionNoninteractiveEnabled": true
+    }
+  }
+}

@@ -2,8 +2,22 @@ import subprocess
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from agent import config
 
 app = FastAPI()
+
+
+def build_gemini_command(prompt: str) -> list[str]:
+    cmd = ["gemini", "--prompt", prompt]
+    
+    for key, value in config.GEMINI_CONFIG.items():
+        if isinstance(value, bool):
+            if value:
+                cmd.append(f"--{key}")
+        elif value is not None:
+            cmd.extend([f"--{key}", str(value)])
+            
+    return cmd
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -15,15 +29,17 @@ class PromptResponse(BaseModel):
 @app.post("/ask", response_model=PromptResponse)
 async def ask_gemini(request: PromptRequest):
     env = os.environ.copy()
+    
+    cmd = build_gemini_command(request.prompt)
 
     try:
-        # Run the command and capture output
+        # コマンドの実行
         result = subprocess.run(
-            ["gemini", request.prompt], 
-            capture_output=True, 
-            text=True, 
+            cmd,
+            capture_output=True,
+            text=True,
             env=env,
-            timeout=60
+            timeout=3600
         )
 
         if result.returncode == 0:
@@ -33,7 +49,7 @@ async def ask_gemini(request: PromptRequest):
             return PromptResponse(response=response_text)
         else:
             return PromptResponse(response="", error=result.stderr.strip())
-            
+
     except subprocess.TimeoutExpired:
         return PromptResponse(response="", error="Gemini CLI timed out.")
     except Exception as e:

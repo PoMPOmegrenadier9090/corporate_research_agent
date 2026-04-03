@@ -12,7 +12,7 @@ services:
       - .env
     command: uvicorn agent.api:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - gemini_home:/root/.gemini # 名前付きボリュームをマウント
+      - ./.gemini:/root/.gemini # 認証情報・設定ファイルをホストと共有
       - .:/app
     ports:
       - "8000:8000"
@@ -35,6 +35,3 @@ services:
     depends_on:
       - gemini-agent
 
-# 名前付きボリュームの定義
-volumes:
-  gemini_home:
