@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:22-slim
 
 # 作業ディレクトリ
 WORKDIR /app
@@ -13,7 +13,10 @@ RUN apt-get update && apt-get install -y \
 
 # Gemini CLI と Python ライブラリをインストール
 RUN npm install -g @google/gemini-cli
-RUN pip3 install --break-system-packages fastapi uvicorn
+# イメージ作成時にはファイルがマウントされないため，コピーが必要
+COPY agent/requirements.txt .
+# システム全体へのパッケージインストールを許可する
+RUN pip3 install --break-system-packages -r requirements.txt
 
 # Gemini CLI が利用する設定ディレクトリを事前作成
 RUN mkdir -p /root/.gemini /app/workspace

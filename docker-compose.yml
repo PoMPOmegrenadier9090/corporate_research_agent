@@ -12,17 +12,18 @@ services:
       - .env
     command: uvicorn agent.api:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - gemini_home:/root/.gemini
+      - gemini_home:/root/.gemini # 名前付きボリュームをマウント
       - .:/app
     ports:
       - "8000:8000"
 
   discord-bot:
     build:
-      context: .
+      context: ./bot
       dockerfile: Dockerfile.bot
     image: discord-bot
     container_name: discord-bot
+    command: watchmedo auto-restart --directory=. --pattern=bot.py --recursive -- python bot.py
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - API_URL=http://gemini-agent:8000/ask
@@ -30,9 +31,10 @@ services:
     env_file:
       - .env
     volumes:
-      - .:/app
+      - ./bot:/app
     depends_on:
       - gemini-agent
 
+# 名前付きボリュームの定義
 volumes:
   gemini_home:

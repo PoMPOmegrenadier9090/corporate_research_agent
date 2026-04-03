@@ -1,0 +1,9 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+# discord.py と aiohttp, watchdog(自動リロード用) をインストール
+RUN pip install -r requirements.txt
+
+CMD ["python", "bot.py"]
