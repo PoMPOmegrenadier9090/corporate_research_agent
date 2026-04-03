@@ -1,0 +1,38 @@
+services:
+  gemini-agent:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile.agent
+    image: gemini-agent
+    container_name: gemini-agent
+    init: true
+    environment:
+      - TERM=xterm-256color
+    env_file:
+      - .env
+    command: uvicorn agent.api:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - gemini_home:/root/.gemini
+      - .:/app
+    ports:
+      - "8000:8000"
+
+  discord-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    image: discord-bot
+    container_name: discord-bot
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - API_URL=http://gemini-agent:8000/ask
+      # Ensure it loads env too if needed, but token is passed.
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - gemini-agent
+
+volumes:
+  gemini_home:

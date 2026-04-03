@@ -1,0 +1,8 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# discord.py と aiohttp をインストール
+RUN pip install discord.py aiohttp
+
+CMD ["python", "bot.py"]
