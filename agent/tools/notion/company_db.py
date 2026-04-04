@@ -1,12 +1,25 @@
 import os
 import sys
+import re
 import json
 import argparse
 from pathlib import Path
 from typing import Any, cast
 from notion_client import Client
 
-DEFAULT_TEMPLATE_ID = "336718ffb6a880078681cfc6513ba567"
+COMPANY_TITLE_PROPERTY_NAME = "企業名"
+
+# プロパティのマッピング設計（DB上の定義に合わせる）
+PROPERTY_TYPES = {
+    "FCF": "number",
+    "営業利益率": "number",
+    "売上高": "number",
+    "タグ": "multi_select",
+    "業種": "multi_select",
+    "志望度": "select",
+    "業界": "select",
+    "応募状況": "status"
+}
 
 # ロガーをインポート
 sys.path.append(str(Path(__file__).parent.parent))
@@ -26,21 +39,8 @@ def get_db_id():
 
 def get_template_id():
     template_id = os.environ.get("NOTION_TEMPLATE_ID")
-    if not template_id:
-        raise ValueError("NOTION_TEMPLATE_ID is missing in environment.")
-    return template_id
+    return template_id  # None が返っても OK、テンプレートなしで作成する
 
-# プロパティのマッピング設計（DB上の定義に合わせる）
-PROPERTY_TYPES = {
-    "FCF": "number",
-    "営業利益率": "number",
-    "売上高": "number",
-    "タグ": "multi_select",
-    "業種": "multi_select",
-    "志望度": "select",
-    "業界": "select",
-    "応募状況": "status"
-}
 
 def format_property_value(prop_name, raw_value):
     """Notionの型に合わせてプロパティを整形する"""
@@ -93,11 +93,11 @@ def action_get(company_name: str):
             "message": f"データソースからレコードを取得できませんでした"
         }
 
-    # 名前が一致するページを検索 (タイトルプロパティ名は '企業名' 固定)
+    # 名前が一致するページを検索
     target_page = None
     for page in results:
         props = page.get("properties", {})
-        title_data = props.get("企業名", {}).get("title", [])
+        title_data = props.get(COMPANY_TITLE_PROPERTY_NAME, {}).get("title", [])
         if title_data:
             plain_text = title_data[0].get("plain_text", "")
             if company_name in plain_text:
@@ -142,7 +142,7 @@ def action_get(company_name: str):
         "exists": True,
         "page_id": page_id,
         "company_name": company_name,
-        "title_property": "企業名",
+        "title_property": COMPANY_TITLE_PROPERTY_NAME,
         "empty_properties": empty_props,
         "filled_properties": filled_props
     }
@@ -168,16 +168,18 @@ def action_add_company(company_name: str):
     new_page_data = {
         "parent": {"database_id": db_id},
         "properties": {
-            "企業名": {
+            COMPANY_TITLE_PROPERTY_NAME: {
                 "title": [{"text": {"content": company_name}}]
             }
         }
     }
 
-    new_page_data["template"] = {
-        "type": "template_id",
-        "template_id": template_id
-    }
+    # テンプレートIDが存在する場合のみテンプレートを適用
+    if template_id:
+        new_page_data["template"] = {
+            "type": "template_id",
+            "template_id": template_id
+        }
     
     try:
         new_page = cast(dict[str, Any], notion.pages.create(**new_page_data))
@@ -217,28 +219,84 @@ def action_update_properties(page_id: str, updates_json: str):
     except Exception as e:
         return {"error": f"プロパティ更新エラー: {str(e)}"}
 
+def parse_rich_text(text: str):
+    """簡易的なMarkdownインライン書式（太字、コード）をNotionのrich_textにパースする"""
+    pattern = re.compile(r'(\*\*(.*?)\*\*)|(`(.*?)`)')
+    rich_texts = []
+    last_idx = 0
+    
+    for match in pattern.finditer(text):
+        if match.start() > last_idx:
+            rich_texts.append({
+                "type": "text",
+                "text": {"content": text[last_idx:match.start()]}
+            })
+        
+        if match.group(1): # Bold (**text**)
+            rich_texts.append({
+                "type": "text",
+                "text": {"content": match.group(2)},
+                "annotations": {"bold": True}
+            })
+        elif match.group(3): # Code (`text`)
+            rich_texts.append({
+                "type": "text",
+                "text": {"content": match.group(4)},
+                "annotations": {"code": True}
+            })
+        last_idx = match.end()
+        
+    if last_idx < len(text):
+        rich_texts.append({
+            "type": "text",
+            "text": {"content": text[last_idx:]}
+        })
+        
+    return rich_texts if rich_texts else [{"type": "text", "text": {"content": ""}}]
+
 def action_append_content(page_id: str, content: str):
     """指定されたPage IDの本文の末尾にMarkdownライクなテキストを追記する"""
     notion = get_notion_client()
     
-    # 簡易的にテキストをparagraphブロックに変換。改行で分割する
+    # Markdownの基本書式をNotionのブロックタイプに簡易変換して追記
     paragraphs = content.split('\n')
     blocks = []
     for p in paragraphs:
         if not p.strip():
             continue
-        # Notionのテキストブロック制限(2000文字)対応などはここでは簡易実装とする
-        text_chunk = p.strip()[:2000]
+            
+        text_chunk = p.strip()
+        block_type = "paragraph"
+        text_content = text_chunk
+        
+        # Markdown書式の判別
+        if text_chunk.startswith("# "):
+            block_type = "heading_1"
+            text_content = text_chunk[2:].strip()
+        elif text_chunk.startswith("## "):
+            block_type = "heading_2"
+            text_content = text_chunk[3:].strip()
+        elif text_chunk.startswith("### "):
+            block_type = "heading_3"
+            text_content = text_chunk[4:].strip()
+        elif text_chunk.startswith("- ") or text_chunk.startswith("* "):
+            block_type = "bulleted_list_item"
+            text_content = text_chunk[2:].strip()
+        elif text_chunk.startswith("> "):
+            block_type = "toggle"
+            text_content = text_chunk[2:].strip()
+        elif re.match(r"^\d+\.\s", text_chunk):
+            block_type = "numbered_list_item"
+            text_content = re.sub(r"^\d+\.\s", "", text_chunk)
+            
+        # Notionの1ブロックあたりのテキスト制限(2000文字)
+        text_content = text_content[:2000]
+        
         blocks.append({
             "object": "block",
-            "type": "paragraph",
-            "paragraph": {
-                "rich_text": [
-                    {
-                        "type": "text",
-                        "text": {"content": text_chunk}
-                    }
-                ]
+            "type": block_type,
+            block_type: {
+                "rich_text": parse_rich_text(text_content)
             }
         })
         

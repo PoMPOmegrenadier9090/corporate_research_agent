@@ -5,7 +5,8 @@ __pycache__
 .gemini/*
 
 !.gemini/settings.json
-!.gemini/skills
 !.gemini/GEMINI.md
+!.gemini/skills
+!.gemini/skills/**
 
 data
