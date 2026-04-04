@@ -1,8 +1,8 @@
 services:
   gemini-agent:
     build:
-      context: .
-      dockerfile: agent/Dockerfile.agent
+      context: ./agent
+      dockerfile: Dockerfile.agent
     image: gemini-agent
     container_name: gemini-agent
     init: true
@@ -10,10 +10,11 @@ services:
       - TERM=xterm-256color
     env_file:
       - .env
-    command: uvicorn agent.api:app --host 0.0.0.0 --port 8000 --reload
+    command: uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./.gemini:/root/.gemini # 認証情報・設定ファイルをホストと共有
-      - .:/app
+      - ./agent:/app
+      - /app/.venv # ホスト側の .venv と競合しないようにコンテナ専用のボリュームを確保
     ports:
       - "8000:8000"
 

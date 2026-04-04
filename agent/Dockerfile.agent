@@ -1,25 +1,25 @@
-FROM node:22-slim
+FROM python:3.14-slim
 
-# 作業ディレクトリ
 WORKDIR /app
 
-# 必要なシステムパッケージをインストール
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    curl \
-    python3 \
-    python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+# uv (Python パッケージマネージャ) をインストール
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Gemini CLI と Python ライブラリをインストール
+# Node.js (Gemini CLI 用) をインストール
+RUN apt-get update && apt-get install -y curl ca-certificates && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Gemini CLI をグローバルインストール
 RUN npm install -g @google/gemini-cli
-# イメージ作成時にはファイルがマウントされないため，コピーが必要
-COPY agent/requirements.txt .
-# システム全体へのパッケージインストールを許可する
-RUN pip3 install --break-system-packages -r requirements.txt
+
+# Python 依存のインストール (pyproject.toml を先にコピーしてキャッシュを活かす)
+COPY pyproject.toml .
+RUN uv sync
 
 # Gemini CLI が利用する設定ディレクトリを事前作成
-RUN mkdir -p /root/.gemini /app/workspace
+RUN mkdir -p /root/.gemini
 
-# uvicornを使ってFastAPIを起動
-CMD ["uvicorn", "agent.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# uvicorn を使って FastAPI を起動
+CMD ["uv", "run", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]

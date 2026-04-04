@@ -1,8 +1,9 @@
 import subprocess
+import asyncio
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from agent import config
+import config
 
 app = FastAPI()
 
@@ -33,25 +34,47 @@ async def ask_gemini(request: PromptRequest):
     cmd = build_gemini_command(request.prompt)
 
     try:
-        # コマンドの実行
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=3600
+        # 非同期でコマンドを実行し、stdout(結果)とstderr(思考ログ等)を分離
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env
         )
 
-        if result.returncode == 0:
-            response_text = result.stdout.strip()
+        # stderrをリアルタイムでdocker logsに出力するタスク
+        async def stream_stderr():
+            while True:
+                line = await process.stderr.readline()
+                if not line:
+                    break
+                print(line.decode('utf-8', errors='replace'), end="", flush=True)
+
+        # stdoutを結果としてキャプチャするタスク
+        async def capture_stdout():
+            stdout_data = await process.stdout.read()
+            return stdout_data.decode('utf-8', errors='replace').strip()
+
+        stream_task = asyncio.create_task(stream_stderr())
+        capture_task = asyncio.create_task(capture_stdout())
+
+        # プロセスの終了を待機（タイムアウト付き）
+        await asyncio.wait_for(process.wait(), timeout=3600)
+
+        # 読み込みの完了を待機
+        await stream_task
+        response_text = await capture_task
+        return_code = process.returncode
+        
+        if return_code == 0:
             if not response_text:
                 response_text = "Gemini returned an empty response."
             return PromptResponse(response=response_text)
         else:
-            return PromptResponse(response="", error=result.stderr.strip())
+            return PromptResponse(response="", error=response_text.strip())
 
-    except subprocess.TimeoutExpired:
-        return PromptResponse(response="", error="Gemini CLI timed out.")
+    except asyncio.TimeoutError:
+        return PromptResponse(response="", error="Gemini CLI timed out (3600s).")
     except Exception as e:
         return PromptResponse(response="", error=str(e))
 

@@ -6,5 +6,5 @@ GEMINI_CONFIG = {
     "approval-mode": "yolo",
     "output-format": "text",
     "screen-reader": "true",
-    "model": "auto"
+    "model": "flash"
 }
