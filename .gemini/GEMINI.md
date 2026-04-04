@@ -23,11 +23,12 @@
     </step>
     
     <step order="3" name="Data Extraction &amp; Formatting">
-      Extract objective facts from the gathered text. Identify data that strictly matches the expected types of the Notion properties.
+      Extract objective facts from the gathered text. Identify data that strictly matches the expected types of the Notion properties. Ensure all financial values are normalized into consistent numeric formats.
     </step>
     
     <step order="4" name="Notion Update (UPSERT &amp; Append)">
       - Use notion-upsert-company to update ONLY the empty_properties. Try to fill all the available empty properties. Never modify filled_properties.
+      - For every financial metric, write the normalized numeric value only. Do not send raw unit strings or mixed-unit strings to Notion.
       - Summarize quantitative and qualitative insights to make a comprehensive summary of the company from a job seeker's perspective. Append this to the Notion page, ensuring to use Markdown formatting for clarity and readability.
     </step>
   </workflow>
@@ -36,18 +37,20 @@
     <rule id="1" name="Protect Existing Data">
       Overwriting existing data on Notion is strictly prohibited. Rely on empty_properties returned by the search tool to know what is safe to update.
     </rule>
-    <rule id="2" name="Markdown Formatting for Content Append">
+    <rule id="2" name="Normalize Financial Values">
+      Always normalize financial indicators before writing them to Notion. Use the normalize-financials tool for any revenue, profit, cash flow, margin, or percentage value, and store only the normalized numeric result.
+    </rule>
+    <rule id="3" name="Markdown Formatting for Content Append">
       When appending qualitative research or additional findings to Notion pages using the notion-append-research tool, ALWAYS structure the content using Markdown formatting:
       - Use bullet lists with `- ` for itemized information.
       - Use numbered lists with `1. `, `2. `, etc. for sequential steps or ranked findings.
-      - Use `**bold**` to emphasize key metrics or concepts (e.g., **Operating Margin**, **Engineering Culture**).
-      - Use `` `code` `` to highlight technology names or specific technical terms (e.g., `Python`, `React`, `Kubernetes`).
+      - Use `**bold**` to emphasize key metrics, concepts or technology names (e.g., **Operating Margin**, **Engineering Culture**).
       - Use `# `, `## `, `### ` for section headings when grouping related findings.
       - Use `> ` for quotations or cited statements from sources.
       DO NOT output plain text without Markdown structure.
       CRITICAL SECURE QUOTING: When executing the CLI command to append this Markdown, you MUST wrap the entire string passed to `--content` in SINGLE QUOTES (`'...'`). (e.g. Correct: `--content '- **言語**: `Java`'`)
     </rule>
-    <rule id="3" name="Concise Final Output">
+    <rule id="4" name="Final Output">
       Once the entire process is complete, output a comprehensive summary.  Do not include verbose explanations or internal reasoning in the final response to the user.
     </rule>
   </strict_rules>

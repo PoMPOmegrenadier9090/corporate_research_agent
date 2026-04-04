@@ -5,12 +5,13 @@ from bs4 import BeautifulSoup
 import re
 import json
 import sys
-import argparse
 from pathlib import Path
 
 # __file__ が agent/tools/IR_fetch/main.py なので agent/tools をパスに追加
 sys.path.append(str(Path(__file__).parent.parent))
 from logger import log_action
+
+from normalize_financials.parser import parse_financial_value
 
 INDICATORS = {
     "c_1": "売上高",
@@ -24,50 +25,6 @@ INDICATORS = {
     "c_16": "営業CF",
     "c_19": "フリーCF"
 }
-
-def parse_financial_value(text):
-    # 特殊空白文字の削除
-    text = text.replace('\u2009', '').replace('\u2003', '').strip()
-    if text == '-' or text == '' or text == '赤字':
-        return None
-    
-    # 赤字表示フラグの作成
-    is_negative = False
-    if text.startswith('-') or text.startswith('▲'):
-        is_negative = True
-        text = text[1:]
-    
-    # %指標の場合
-    if '%' in text:
-        try:
-            val = float(text.replace('%', '').replace(',', '').strip()) / 100.0
-            return -val if is_negative else val
-        except:
-            return None
-    
-    # 日本語の単位が入った金額の解析
-    total = 0.0
-    matches = list(re.finditer(r'([\d\.]+)(兆|億|万)?', text))
-    if not matches:
-        try:
-            val = float(text.replace(',', ''))
-            return -val if is_negative else val
-        except:
-            return None
-            
-    for m in matches:
-        num_str, unit = m.groups()
-        num = float(num_str)
-        if unit == '兆':
-            total += num * 1_000_000_000_000
-        elif unit == '億':
-            total += num * 100_000_000
-        elif unit == '万':
-            total += num * 10_000
-        else:
-            total += num
-            
-    return -total if is_negative else total
 
 def extract_year(dt_text):
     # YYYY/MM 形式を抽出して YYYY-MM に変換
