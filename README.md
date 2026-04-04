@@ -1,4 +1,4 @@
-## Agent Development
+## Corporate Research Agent Workflow
 Gemini CLIを利用した，就活をサポートするための企業調査ワークフロー．
 Discordから指示を出し，エージェントが企業の財務情報，企業文化，技術スタックなどの情報を自律的に調査してNotionに記録します．
 
