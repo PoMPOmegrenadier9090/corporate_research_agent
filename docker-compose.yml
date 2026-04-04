@@ -10,7 +10,7 @@ services:
       - TERM=xterm-256color
     env_file:
       - .env
-    command: uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+    command: uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app --reload-include '*.py' --reload-exclude '.venv/*'
     volumes:
       - ./.gemini:/root/.gemini # 認証情報・設定ファイルをホストと共有
       - ./agent:/app
