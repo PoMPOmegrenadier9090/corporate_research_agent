@@ -17,6 +17,7 @@ services:
       - /app/.venv # ホスト側の .venv と競合しないようにコンテナ専用のボリュームを確保
     ports:
       - "8000:8000"
+    restart: unless-stopped
   discord-bot:
     build:
       context: ./bot
@@ -34,3 +35,4 @@ services:
       - ./bot:/app
     depends_on:
       - gemini-agent
+    restart: unless-stopped
