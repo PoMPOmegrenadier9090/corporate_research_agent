@@ -1,5 +1,5 @@
 ---
-name: notion_add_company
+name: notion-add-company
 description: 企業データベース（Notion）を検索して、対象企業が存在しなかった場合に、新しい企業の空ページを作成します。
 ---
 

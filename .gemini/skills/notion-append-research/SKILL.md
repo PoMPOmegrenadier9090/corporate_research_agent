@@ -1,5 +1,5 @@
 ---
-name: notion_append_research
+name: notion-append-research
 description: 企業データベース（Notion）の対象企業のページ「本文（ブロック）」の末尾に、調査した結果のノートや参照URL（Markdown）を安全に追記します。
 ---
 

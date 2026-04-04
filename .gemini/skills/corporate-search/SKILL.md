@@ -1,5 +1,5 @@
 ---
-name: corporate_search
+name: corporate-search
 description: 企業の基本的な情報、事業内容、企業理念（PurposeやMission）、求める人物像などを対象企業から広く検索するために使用します。
 ---
 

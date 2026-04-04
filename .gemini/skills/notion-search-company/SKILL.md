@@ -1,5 +1,5 @@
 ---
-name: notion_search_company
+name: notion-search-company
 description: 企業データベース（Notion）から企業を検索し、対象企業のPage IDと、現在「空（未入力）」のプロパティのリストを取得します。
 ---
 

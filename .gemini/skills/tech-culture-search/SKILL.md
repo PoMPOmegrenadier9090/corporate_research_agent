@@ -1,5 +1,5 @@
 ---
-name: tech_culture_search
+name: tech-culture-search
 description: 企業の技術スタック、エンジニアのカルチャー、開発体制などを「技術系ブログ（Zenn, Qiita, Note）」から厳密に抽出するために使用します。
 ---
 

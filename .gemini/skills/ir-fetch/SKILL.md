@@ -1,5 +1,5 @@
 ---
-name: ir_fetch
+name: ir-fetch
 description: Fetches key financial metrics for the last 5 years from IRBANK based on a company's stock code. Includes sales, operating profit, net profit, margins, ROE, ROA, shareholders' equity ratio (株主資本比率), debt ratio, and cash flows (operating and free). Useful for evaluating financial health, growth, and scale. Returns data in JSON format.
 ---
 

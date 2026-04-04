@@ -1,5 +1,5 @@
 ---
-name: notion_upsert_company
+name: notion-upsert-company
 description: 企業データベース（Notion）の特定の企業のプロパティ（列データ）を安全に更新します。（上書きを防ぐため、事前に empty_properties に分類されているものだけを更新してください）
 ---
 

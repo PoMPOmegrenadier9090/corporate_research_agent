@@ -1,5 +1,5 @@
 ---
-name: fetch_page
+name: fetch-page
 description: 指定されたURLのウェブページにアクセスし、JINA AI リーダー APIを経由して不要な要素を省いた綺麗なマークダウンテキスト（コンテンツ本文）を取得します。
 ---
 

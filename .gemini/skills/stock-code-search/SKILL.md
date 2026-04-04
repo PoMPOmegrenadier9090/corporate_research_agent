@@ -1,4 +1,5 @@
 ---
+name: stock-code-search
 description: Search for Japanese stock codes by company name
 ---
 
