@@ -73,3 +73,15 @@ docker compose exec gemini-agent uv add [package-name]
 ## 注意
 Gemini CLIのYOLOモードを利用しています．そのため，エージェントはあらゆるコマンドを承認なしに実行することができます．プロンプトインジェクションにより，意図しないコマンドが実行されるリスクがあります．
 コンテナ内で実行するため，システムに対する危険性はありませんが，環境変数の漏洩の危険性があります．エージェントによるコマンド実行をJSONでのツール実行に限定する改善が必要です．
+
+## 参考文献
+1. [Build, debug & deploy with AI | Gemini CLI](https://geminicli.com/)
+2. [IRBANK - 企業の決算情報・株価情報・企業分析・銘柄発掘](https://irbank.net/)
+3. [東証上場銘柄一覧 | 日本取引所グループ](https://www.jpx.co.jp/markets/statistics-equities/misc/01.html)
+4. [Jina AI - Your Search Foundation, Supercharged.](https://jina.ai/)
+5. [Discord Developer Platform - Documentation - Discord](https://docs.discord.com/developers/intro)
+6. [マーケットプレイスプロフィール](https://www.notion.so/profile/integrations/internal)
+7. [Overview - Agent Skills](https://agentskills.io/home)
+8. [FastAPI](https://fastapi.tiangolo.com/)
+9. [ramnes/notion-sdk-py: Notion API client SDK, rewritten in Python! (sync + async)](https://github.com/ramnes/notion-sdk-py)
+10. [Beautiful Soup Documentation — Beautiful Soup 4.4.0 documentation](https://beautiful-soup-4.readthedocs.io/en/latest/)
