@@ -573,11 +573,21 @@ def parse_rich_text(text: str):
     return rich_texts if rich_texts else [{"type": "text", "text": {"content": ""}}]
 
 
+def _normalize_append_content(content: str) -> str:
+    """CLI経由で渡されるエスケープ改行(\\n)を実改行へ戻す。"""
+    if "\n" in content:
+        return content
+    if "\\n" in content or "\\r\\n" in content:
+        return content.replace("\\r\\n", "\n").replace("\\n", "\n")
+    return content
+
+
 def action_append_content(page_id: str, content: str):
     """指定されたPage IDの本文の末尾にMarkdownライクなテキストを追記する"""
     notion = get_notion_client()
 
-    paragraphs = content.split("\n")
+    normalized_content = _normalize_append_content(content)
+    paragraphs = normalized_content.split("\n")
     blocks = []
     for p in paragraphs:
         if not p.strip():
