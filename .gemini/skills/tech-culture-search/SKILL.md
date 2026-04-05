@@ -10,7 +10,7 @@ Use this tool when you specifically need to research a company's tech culture an
 Execute the web search tool via uv. You **must** provide the `-d` parameter to restrict domains.
 
 ```bash
-uv run tools/web_search/main.py -d "zenn.dev,qiita.com,note.com" -q "{Company Name} 技術スタック エンジニア" -l 3
+uv run -m tools.web_search.main -d "zenn.dev,qiita.com,note.com" -q "{Company Name} 技術スタック エンジニア" -l 3
 ```
 
 ### Options

@@ -1,0 +1,16 @@
+{
+  "name": "episode",
+  "db_id_env_key": "NOTION_DB_ID",
+  "template_id_env_key": "NOTION_TEMPLATE_ID",
+  "title_property_name": "企業名",
+  "property_types": {
+    "FCF": "number",
+    "営業利益率": "number",
+    "売上高": "number",
+    "タグ": "multi_select",
+    "業種": "multi_select",
+    "志望度": "select",
+    "業界": "select",
+    "応募状況": "status"
+  }
+}

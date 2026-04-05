@@ -11,7 +11,7 @@ When `corporate_search` or `tech_culture_search` returns interesting links but t
 Execute the fetch tool via uv. 
 
 ```bash
-uv run tools/fetch_page/main.py -u "{URL}"
+uv run -m tools.fetch_page.main -u "{URL}"
 ```
 
 ### Options

@@ -10,7 +10,7 @@ Use this tool to gather general information about a company, such as their philo
 Execute the web search tool via uv. No need to restrict domains because corporate information is spread across various official sites and news domains.
 
 ```bash
-uv run tools/web_search/main.py -q "{Company Name} 企業理念 OR 求める人物像" -l 3
+uv run -m tools.web_search.main -q "{Company Name} 企業理念 OR 求める人物像" -l 3
 ```
 
 ### Options

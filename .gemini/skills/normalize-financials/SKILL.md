@@ -19,7 +19,7 @@ Use this skill when a raw financial string must be converted into a consistent n
 Run the shared tool from the project root.
 
 ```bash
-uv run python tools/normalize_financials/main.py --text "1兆2,345億6,789万円"
+uv run -m tools.normalize_financials.main --text "1兆2,345億6,789万円"
 ```
 
 ### Example output

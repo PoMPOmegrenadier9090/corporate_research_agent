@@ -15,14 +15,14 @@ When you need to analyze a company's financial health, scale, or growth potentia
 Use the `run_command` tool to execute the script inside the agent container.
 
 ```bash
-uv run tools/IR_fetch/main.py --code {stock_code}
+uv run -m tools.IR_fetch.main --code {stock_code}
 ```
 
 ### Example
 To fetch the financial data for Toyota (7203):
 
 ```bash
-uv run tools/IR_fetch/main.py --code 7203
+uv run -m tools.IR_fetch.main --code 7203
 ```
 
 ### JSON Output

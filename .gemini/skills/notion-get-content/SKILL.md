@@ -17,13 +17,13 @@ This skill is useful when:
 Execute the tool via uv inside the agent container.
 
 ```bash
-uv run tools/notion/company_db.py get_content --page_id "{PAGE_ID}" --max_depth 3 --page_size 50
+uv run -m tools.notion.company_db get_content --page_id "{PAGE_ID}" --max_depth 3 --page_size 50
 ```
 
 For pagination (top-level blocks), pass `--start_cursor` from the previous response.
 
 ```bash
-uv run tools/notion/company_db.py get_content --page_id "{PAGE_ID}" --max_depth 3 --page_size 50 --start_cursor "{NEXT_CURSOR}"
+uv run -m tools.notion.company_db get_content --page_id "{PAGE_ID}" --max_depth 3 --page_size 50 --start_cursor "{NEXT_CURSOR}"
 ```
 
 ### Options
