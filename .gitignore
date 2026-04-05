@@ -10,3 +10,5 @@ __pycache__
 !.gemini/skills/**
 
 data
+
+bot/sessions.db
