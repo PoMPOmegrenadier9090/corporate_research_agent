@@ -219,6 +219,197 @@ def action_update_properties(page_id: str, updates_json: str):
     except Exception as e:
         return {"error": f"プロパティ更新エラー: {str(e)}"}
 
+
+def _extract_rich_text_plain_text(rich_text_list: list[dict[str, Any]]) -> str:
+    texts: list[str] = []
+    for item in rich_text_list:
+        plain = item.get("plain_text")
+        if plain is not None:
+            texts.append(str(plain))
+            continue
+
+        text_obj = item.get("text", {})
+        content = text_obj.get("content") if isinstance(text_obj, dict) else None
+        if content is not None:
+            texts.append(str(content))
+
+    return "".join(texts)
+
+
+def _format_block_plain_text(block: dict[str, Any]) -> str:
+    block_type = block.get("type", "")
+    if not block_type:
+        return ""
+
+    payload = block.get(block_type, {})
+    if not isinstance(payload, dict):
+        payload = {}
+
+    if block_type in {
+        "paragraph",
+        "heading_1",
+        "heading_2",
+        "heading_3",
+        "heading_4",
+        "bulleted_list_item",
+        "numbered_list_item",
+        "quote",
+        "toggle",
+        "callout",
+        "to_do",
+    }:
+        rich_text = payload.get("rich_text", [])
+        if not isinstance(rich_text, list):
+            rich_text = []
+        text = _extract_rich_text_plain_text(cast(list[dict[str, Any]], rich_text))
+
+        if block_type == "heading_1":
+            return f"# {text}" if text else "#"
+        if block_type == "heading_2":
+            return f"## {text}" if text else "##"
+        if block_type == "heading_3":
+            return f"### {text}" if text else "###"
+        if block_type == "heading_4":
+            return f"#### {text}" if text else "####"
+        if block_type == "bulleted_list_item":
+            return f"- {text}" if text else "-"
+        if block_type == "numbered_list_item":
+            return f"1. {text}" if text else "1."
+        if block_type == "quote":
+            return f"> {text}" if text else ">"
+        if block_type == "to_do":
+            checked = payload.get("checked", False)
+            mark = "x" if checked else " "
+            return f"- [{mark}] {text}" if text else f"- [{mark}]"
+
+        return text
+
+    if block_type == "divider":
+        return "---"
+
+    if block_type == "child_page":
+        title = payload.get("title", "")
+        return f"[child_page] {title}" if title else "[child_page]"
+
+    if block_type == "bookmark":
+        url = payload.get("url", "")
+        return f"[bookmark] {url}" if url else "[bookmark]"
+
+    if block_type == "code":
+        rich_text = payload.get("rich_text", [])
+        if not isinstance(rich_text, list):
+            rich_text = []
+        code_text = _extract_rich_text_plain_text(cast(list[dict[str, Any]], rich_text))
+        language = payload.get("language", "plain text")
+        return f"```{language}\n{code_text}\n```" if code_text else f"```{language}\n```"
+
+    return f"[{block_type}]"
+
+
+def _collect_child_block_texts(
+    notion: Client,
+    block_id: str,
+    depth: int,
+    max_depth: int,
+    page_size: int,
+) -> list[str]:
+    """
+    子ブロックのテキストを再帰的に収集する。深さ制限とページネーションに対応。
+    """
+    lines: list[str] = []
+    cursor: str | None = None
+
+    while True:
+        query: dict[str, Any] = {"block_id": block_id, "page_size": page_size}
+        if cursor:
+            query["start_cursor"] = cursor
+
+        response = cast(dict[str, Any], notion.blocks.children.list(**query))
+        blocks = cast(list[dict[str, Any]], response.get("results", []))
+
+        for block in blocks:
+            line = _format_block_plain_text(block)
+            if line:
+                lines.append(("  " * depth) + line)
+
+            has_children = block.get("has_children", False)
+            child_block_id = block.get("id")
+            if has_children and child_block_id and depth < max_depth:
+                lines.extend(
+                    _collect_child_block_texts(
+                        notion=notion,
+                        block_id=str(child_block_id),
+                        depth=depth + 1,
+                        max_depth=max_depth,
+                        page_size=page_size,
+                    )
+                )
+
+        if not response.get("has_more", False):
+            break
+        cursor = cast(str | None, response.get("next_cursor"))
+
+    return lines
+
+
+def action_get_content(
+    page_id: str,
+    max_depth: int = 3,
+    page_size: int = 50,
+    start_cursor: str | None = None,
+):
+    """指定ページの本文ブロックを取得し、plain_textとして返す（トップレベルはカーソルページング対応）。"""
+    notion = get_notion_client()
+
+    if max_depth < 0:
+        return {"error": "max_depth は 0 以上である必要があります。"}
+    if page_size <= 0:
+        return {"error": "page_size は 1 以上である必要があります。"}
+
+    query: dict[str, Any] = {"block_id": page_id, "page_size": page_size}
+    if start_cursor:
+        query["start_cursor"] = start_cursor
+
+    try:
+        response = cast(dict[str, Any], notion.blocks.children.list(**query))
+        top_blocks = cast(list[dict[str, Any]], response.get("results", []))
+    except Exception as e:
+        return {"error": f"本文ブロックの取得に失敗しました: {str(e)}"}
+
+    lines: list[str] = []
+    for block in top_blocks:
+        line = _format_block_plain_text(block)
+        if line:
+            lines.append(line)
+
+        has_children = block.get("has_children", False)
+        child_block_id = block.get("id")
+        if has_children and child_block_id and max_depth > 0:
+            try:
+                lines.extend(
+                    _collect_child_block_texts(
+                        notion=notion,
+                        block_id=str(child_block_id),
+                        depth=1,
+                        max_depth=max_depth,
+                        page_size=page_size,
+                    )
+                )
+            except Exception as e:
+                return {"error": f"子ブロック取得に失敗しました: {str(e)}"}
+
+    next_cursor = cast(str | None, response.get("next_cursor"))
+    return {
+        "status": "success",
+        "page_id": page_id,
+        "max_depth": max_depth,
+        "top_level_block_count": len(top_blocks),
+        "line_count": len(lines),
+        "has_more": bool(response.get("has_more", False)),
+        "next_cursor": next_cursor,
+        "plain_text": "\n".join(lines),
+    }
+
 def parse_rich_text(text: str):
     """簡易的なMarkdownインライン書式（太字、コード）をNotionのrich_textにパースする"""
     pattern = re.compile(r'(\*\*(.*?)\*\*)|(`(.*?)`)')
@@ -334,6 +525,13 @@ def main():
     parser_append.add_argument("--page_id", required=True, help="Notion Page ID to append to")
     parser_append.add_argument("--content", required=True, help="Text/Markdown to append")
 
+    # parser_get_content
+    parser_get_content = subparsers.add_parser("get_content", help="Get page content blocks as plain text")
+    parser_get_content.add_argument("--page_id", required=True, help="Notion Page ID to read content from")
+    parser_get_content.add_argument("--max_depth", type=int, default=3, help="Max child depth to traverse")
+    parser_get_content.add_argument("--page_size", type=int, default=50, help="Top-level page size for block pagination")
+    parser_get_content.add_argument("--start_cursor", required=False, help="Cursor for top-level pagination")
+
     args = parser.parse_args()
     
     log_action(f"notion_{args.action}", sys.argv[1:])
@@ -347,6 +545,13 @@ def main():
             result = action_update_properties(args.page_id, args.updates)
         elif args.action == "append_content":
             result = action_append_content(args.page_id, args.content)
+        elif args.action == "get_content":
+            result = action_get_content(
+                page_id=args.page_id,
+                max_depth=args.max_depth,
+                page_size=args.page_size,
+                start_cursor=args.start_cursor,
+            )
             
         print(json.dumps(result, ensure_ascii=False, indent=2))
         

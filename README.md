@@ -32,7 +32,7 @@ Google loginでGemini CLIにログインします．
 docker compose exec gemini-agent gemini
 ```
 
-認証が終わったら`ctrl+c`で閉じてください．
+認証が終わったら`ctrl+c`で閉じてください．(利用規約のため，Gemini APIを利用して認証する必要があります)
 
 ### 3. Notion DBの準備
 https://www.notion.so/ed5718ffb6a883aaa1f481bc0c7a62e7?v=de6718ffb6a883f99df18872e13e6014&source=copy_link

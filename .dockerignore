@@ -1,0 +1,6 @@
+.git
+.serena
+.vscode
+__pycache__
+data
+*.ipynb
