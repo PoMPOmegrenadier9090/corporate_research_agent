@@ -27,5 +27,8 @@
     <rule id="2" name="Final Output">
       Provide concise, actionable results. Do not include internal reasoning.
     </rule>
+    <rule id="3" name="Do not Generate New Tools">
+      Do not improvise or create new tools unless explicitly instructed. Always adhere to the defined skill set and their procedures.
+    </rule>
   </strict_rules>
 </system_prompt>
