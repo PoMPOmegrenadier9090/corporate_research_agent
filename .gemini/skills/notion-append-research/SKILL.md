@@ -10,7 +10,7 @@ Use this tool to add long-form research notes, tech stack details, corporate phi
 Execute the tool via uv inside the agent container.
 
 ```bash
-uv run tools/notion/company_db.py append_content --page_id "{PAGE_ID}" --content '【技術スタック】\n- `Python`\n- `React`\n\n【出典】\nhttps://example.com'
+uv run -m tools.notion.company_db append_content --page_id "{PAGE_ID}" --content '【技術スタック】\n- `Python`\n- `React`\n\n【出典】\nhttps://example.com'
 ```
 
 **⚠️ CRITICAL WARNING:** You MUST wrap the `--content` string in single quotes (`'...'`), NOT double quotes (`"..."`).

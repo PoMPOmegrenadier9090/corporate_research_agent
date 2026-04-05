@@ -17,17 +17,17 @@ Use this skill to look up the stock code (証券コード) and industry classifi
 Run the following command from the project root. You can specify one or multiple company names separated by spaces:
 
 ```bash
-uv run python tools/stock_code_search/main.py "<company1>" ["<company2>...]
+uv run -m tools.stock_code_search.main "<company1>" ["<company2>..."]
 ```
 
 ### Examples
 
 ```bash
 # Search by a single company name
-uv run python tools/stock_code_search/main.py "トヨタ"
+uv run -m tools.stock_code_search.main "トヨタ"
 
 # Search by multiple keywords at once
-uv run python tools/stock_code_search/main.py "トヨタ" "豊田"
+uv run -m tools.stock_code_search.main "トヨタ" "豊田"
 ```
 
 ### Output format

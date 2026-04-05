@@ -9,7 +9,7 @@ Use this tool only when `notion_search_company` returns `"exists": false`, indic
 Execute the tool via uv inside the agent container.
 
 ```bash
-uv run tools/notion/company_db.py add_company --name "{Company Name}"
+uv run -m tools.notion.company_db add_company --name "{Company Name}"
 ```
 
 ### Options

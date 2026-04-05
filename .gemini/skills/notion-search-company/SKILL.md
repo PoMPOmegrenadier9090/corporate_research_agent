@@ -11,7 +11,7 @@ It will return the `page_id` which you will need for any further updates, as wel
 Execute the tool via uv inside the agent container.
 
 ```bash
-uv run tools/notion/company_db.py get --name "{Company Name}"
+uv run -m tools.notion.company_db get --name "{Company Name}"
 ```
 
 ### Options

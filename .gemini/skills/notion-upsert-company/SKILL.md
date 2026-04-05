@@ -19,7 +19,7 @@ Only update the information that was returned in the `empty_properties` list dur
 Execute the tool via uv inside the agent container.
 
 ```bash
-uv run tools/notion/company_db.py update_properties --page_id "{PAGE_ID}" --updates '{"売上高": 10000, "業種": "IT,ソフトウェア"}'
+uv run -m tools.notion.company_db update_properties --page_id "{PAGE_ID}" --updates '{"売上高": 10000, "業種": "IT,ソフトウェア"}'
 ```
 
 ### Options
