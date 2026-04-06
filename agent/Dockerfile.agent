@@ -18,6 +18,9 @@ RUN npm install -g @google/gemini-cli
 COPY pyproject.toml .
 RUN uv sync
 
+# アプリ本体をイメージ内に取り込む（ランタイムでホストディレクトリをマウントしない）
+COPY . .
+
 # Gemini CLI が利用する設定ディレクトリを事前作成
 RUN mkdir -p /root/.gemini
 

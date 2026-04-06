@@ -11,5 +11,39 @@
     "adk": {
       "agentSessionNoninteractiveEnabled": true
     }
+  },
+  "general": {
+    "sessionRetention": {
+      "maxAge": "360d"
+    }
+  },
+  "model": {
+    "compressionThreshold": 0.8
+  },
+  "mcp": {
+    "allowed": [
+      "agent-tools"
+    ]
+  },
+  "mcpServers": {
+    "agent-tools": {
+      "httpUrl": "http://mcp-tools:9001/mcp",
+      "trust": false,
+      "timeout": 120000,
+      "includeTools": [
+        "fetch_page",
+        "ir_fetch",
+        "web_search",
+        "normalize_financials",
+        "stock_code_search",
+        "notion_search_company",
+        "notion_add_company",
+        "notion_upsert_company",
+        "notion_get_content",
+        "notion_append_research",
+        "notion_episode_list_records",
+        "notion_episode_get_content"
+      ]
+    }
   }
 }

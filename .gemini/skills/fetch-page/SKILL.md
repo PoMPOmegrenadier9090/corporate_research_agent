@@ -8,14 +8,19 @@ Use this tool to read the deep contents of a specific web page.
 When `corporate_search` or `tech_culture_search` returns interesting links but the short snippet is not enough, use this tool with the URL to extract the full readable text of that specific page in an LLM-friendly markdown format.
 
 ## Usage
-Execute the fetch tool via uv. 
+Call MCP tool `fetch_page` with `url`.
 
-```bash
-uv run -m tools.fetch_page.main -u "{URL}"
+```json
+{
+	"tool": "fetch_page",
+	"arguments": {
+		"url": "https://example.com"
+	}
+}
 ```
 
 ### Options
-- `--url`, `-u`: The URL of the web page you want to read (Required).
+- `url`: The URL of the web page you want to read (Required).
 
 ### Output
 Returns a JSON object containing the `title`, `url`, and main `content` (in markdown format).

@@ -8,14 +8,19 @@ Use this tool to check if a company already exists in the target Notion Database
 It will return the `page_id` which you will need for any further updates, as well as a list of `empty_properties` that explicitly tell you what information needs to be researched and filled in step 2.
 
 ## Usage
-Execute the tool via uv inside the agent container.
+Call MCP tool `notion_search_company`.
 
-```bash
-uv run -m tools.notion.company_db get --name "{Company Name}"
+```json
+{
+  "tool": "notion_search_company",
+  "arguments": {
+    "company_name": "{Company Name}"
+  }
+}
 ```
 
 ### Options
-- `--name`: The name of the company to search for in the database (Required).
+- `company_name`: The name of the company to search for in the database (Required).
 
 ### Output
 Returns a JSON object with the following structure:

@@ -13,26 +13,31 @@ Use this skill to look up the stock code (証券コード) and industry classifi
 - When you need to confirm which industry sector a company belongs to.
 
 ## How to use
+Call MCP tool `stock_code_search` with one or multiple company names:
 
-Run the following command from the project root. You can specify one or multiple company names separated by spaces:
-
-```bash
-uv run -m tools.stock_code_search.main "<company1>" ["<company2>..."]
+```json
+{
+  "tool": "stock_code_search",
+  "arguments": {
+    "queries": ["<company1>", "<company2>"]
+  }
+}
 ```
 
 ### Examples
 
-```bash
-# Search by a single company name
-uv run -m tools.stock_code_search.main "トヨタ"
-
-# Search by multiple keywords at once
-uv run -m tools.stock_code_search.main "トヨタ" "豊田"
+```json
+{
+  "tool": "stock_code_search",
+  "arguments": {
+    "queries": ["トヨタ", "豊田"]
+  }
+}
 ```
 
 ### Output format
 
-The tool outputs a JSON array to stdout, containing the results for each query:
+The tool returns `items` as an array containing results for each query:
 
 ```json
 [

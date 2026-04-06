@@ -13,24 +13,38 @@ This skill is useful when:
 - You need to continue research based on previously appended notes.
 
 ## Usage
+Call MCP tool `notion_get_content`.
 
-Execute the tool via uv inside the agent container.
-
-```bash
-uv run -m tools.notion.company_db get_content --page_id "{PAGE_ID}" --max_depth 3 --page_size 50
+```json
+{
+	"tool": "notion_get_content",
+	"arguments": {
+		"page_id": "{PAGE_ID}",
+		"max_depth": 3,
+		"page_size": 50
+	}
+}
 ```
 
-For pagination (top-level blocks), pass `--start_cursor` from the previous response.
+For pagination (top-level blocks), pass `start_cursor` from the previous response.
 
-```bash
-uv run -m tools.notion.company_db get_content --page_id "{PAGE_ID}" --max_depth 3 --page_size 50 --start_cursor "{NEXT_CURSOR}"
+```json
+{
+	"tool": "notion_get_content",
+	"arguments": {
+		"page_id": "{PAGE_ID}",
+		"max_depth": 3,
+		"page_size": 50,
+		"start_cursor": "{NEXT_CURSOR}"
+	}
+}
 ```
 
 ### Options
-- `--page_id`: Target Notion page ID (Required)
-- `--max_depth`: Max child traversal depth (Optional, default: 3)
-- `--page_size`: Top-level block page size (Optional, default: 50)
-- `--start_cursor`: Cursor for top-level pagination (Optional)
+- `page_id`: Target Notion page ID (Required)
+- `max_depth`: Max child traversal depth (Optional, default: 3)
+- `page_size`: Top-level block page size (Optional, default: 50)
+- `start_cursor`: Cursor for top-level pagination (Optional)
 
 ### Output
 Returns a JSON object including:
