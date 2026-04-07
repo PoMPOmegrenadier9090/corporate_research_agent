@@ -1,7 +1,23 @@
 {
   "security": {
     "auth": {
-      "selectedType": "oauth-personal"
+      "selectedType": "gemini-api-key"
+    }
+  },
+  "agents": {
+    "overrides": {
+      "browser_agent": {
+        "enabled": false
+      },
+      "codebase_investigator": {
+        "enabled": false
+      },
+      "cli_help": {
+        "enabled": true
+      }
+    },
+    "browser": {
+      "headless": true
     }
   },
   "ui": {
@@ -17,8 +33,31 @@
       "maxAge": "360d"
     }
   },
+  "tools": {
+    "shell": {
+      "interactive": false
+    },
+    "core": [
+      "web_fetch",
+      "web_fetch",
+      "save_memory",
+      "write_todos",
+      "activate_skill",
+      "complete_task"
+    ],
+    "exclude": [
+      "list_directory",
+      "read_file",
+      "read_many_files",
+      "write_file",
+      "replace",
+      "glob",
+      "grep_search",
+      "ask_user"
+    ]
+  },
   "model": {
-    "compressionThreshold": 0.8
+    "compressionThreshold": 0.7
   },
   "mcp": {
     "allowed": [
