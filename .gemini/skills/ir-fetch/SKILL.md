@@ -11,18 +11,27 @@ This tool fetches and parses the recent 5 years of financial metrics for a given
 When you need to analyze a company's financial health, scale, or growth potential, use this tool with the appropriate `stock_code` (which you can get using the `stock_code_search` tool). The parsed data includes exact numbers (float) that you can use to perform comparisons or deep financial analyses.
 
 ## Usage
+Call MCP tool `ir_fetch` with `stock_code`.
 
-Use the `run_command` tool to execute the script inside the agent container.
-
-```bash
-uv run -m tools.IR_fetch.main --code {stock_code}
+```json
+{
+	"tool": "ir_fetch",
+	"arguments": {
+		"stock_code": "7203"
+	}
+}
 ```
 
 ### Example
 To fetch the financial data for Toyota (7203):
 
-```bash
-uv run -m tools.IR_fetch.main --code 7203
+```json
+{
+	"tool": "ir_fetch",
+	"arguments": {
+		"stock_code": "7203"
+	}
+}
 ```
 
 ### JSON Output

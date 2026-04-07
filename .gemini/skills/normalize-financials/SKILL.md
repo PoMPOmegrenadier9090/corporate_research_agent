@@ -15,11 +15,15 @@ Use this skill when a raw financial string must be converted into a consistent n
 - Empty or unavailable markers such as `-`, `赤字`, or `N/A` into `null`.
 
 ## How to use
+Call MCP tool `normalize_financials`.
 
-Run the shared tool from the project root.
-
-```bash
-uv run -m tools.normalize_financials.main --text "1兆2,345億6,789万円"
+```json
+{
+  "tool": "normalize_financials",
+  "arguments": {
+    "text": "1兆2,345億6,789万円"
+  }
+}
 ```
 
 ### Example output

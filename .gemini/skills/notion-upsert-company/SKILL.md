@@ -16,15 +16,24 @@ Only update the information that was returned in the `empty_properties` list dur
 - Status type: `応募状況`
 
 ## Usage
-Execute the tool via uv inside the agent container.
+Call MCP tool `notion_upsert_company`.
 
-```bash
-uv run -m tools.notion.company_db update_properties --page_id "{PAGE_ID}" --updates '{"売上高": 10000, "業種": "IT,ソフトウェア"}'
+```json
+{
+	"tool": "notion_upsert_company",
+	"arguments": {
+		"page_id": "{PAGE_ID}",
+		"updates": {
+			"売上高": 10000,
+			"業種": "IT,ソフトウェア"
+		}
+	}
+}
 ```
 
 ### Options
-- `--page_id`: The target Notion Page ID (Required).
-- `--updates`: A JSON string containing the key-value pairs of the properties you want to update (Required).
+- `page_id`: The target Notion Page ID (Required).
+- `updates`: A JSON object containing key-value pairs of properties to update (Required).
 
 ### Output
 Returns a JSON object indicating success or error.

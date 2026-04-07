@@ -57,8 +57,8 @@ Collect only what is needed to fill `empty_properties`.
    - Use `**bold**` for key metrics and concepts.
    - Use headings (`#`, `##`, `###`) for structure where needed.
    - Use `> ` for quotes.
-4. Secure CLI quoting for append content:
-   - When passing Markdown to `--content`, wrap the full string in single quotes (`'...'`) to avoid shell substitution side effects.
+4. Append payload integrity:
+   - Pass markdown content to `notion_append_research.content` without dropping line breaks.
 
 ## Final Output Contract
 

@@ -1,21 +1,15 @@
 [project]
-name = "agent-dev"
+name = "mcptools"
 version = "0.1.0"
-readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    # Agent API
-    "fastapi",
     "fastmcp>=2.10.0",
     "uvicorn",
-    "watchfiles",
-    # Tools
-    "ipykernel>=7.2.0",
-    "pandas>=3.0.2",
     "requests>=2.33.1",
     "beautifulsoup4>=4.14.3",
     "lxml>=6.0.2",
     "tavily-python>=0.7.23",
     "notion-client>=3.0.0",
     "python-dotenv>=1.2.2",
+    "pandas>=3.0.2",
 ]
