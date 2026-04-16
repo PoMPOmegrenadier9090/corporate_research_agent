@@ -1,0 +1,13 @@
+{
+  "name": "task",
+  "db_id_env_key": "NOTION_TASK_DB_ID",
+  "title_property_name": "タスク名",
+  "property_types": {
+    "ステータス": "status",
+    "カテゴリ": "multi_select",
+    "日付": "date",
+    "企業": "relation",
+    "エピソード": "relation",
+    "file": "files"
+  }
+}

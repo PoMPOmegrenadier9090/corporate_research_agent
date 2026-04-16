@@ -9,8 +9,9 @@ from tools.IR_fetch.main import fetch_data as ir_fetch_impl
 from tools.normalize_financials.parser import parse_financial_value
 from tools.stock_code_search.main import search as stock_code_search_impl
 from tools.web_search.main import search_web
-from tools.notion import company_db, episode_db
+from tools.notion import company_db, episode_db, task_db
 from tools.memory import actions as memory_actions
+from tools.gmail_search.main import search_emails as gmail_search_impl
 
 
 mcp = FastMCP(
@@ -133,6 +134,49 @@ def notion_episode_get_content(
             start_cursor=start_cursor,
         )
     )
+
+# ── Gmail Tools ──────────────────────────────────────────
+
+@mcp.tool(name="gmail_search_emails", description="Search Gmail for messages matching query within the last 14 days")
+def gmail_search_emails(query: str, max_results: int = 10) -> dict[str, Any]:
+    return _as_dict(gmail_search_impl(query=query, max_results=max_results))
+
+# ── Task Database Tools ──────────────────────────────────────────
+
+@mcp.tool(name="notion_task_list_records", description="List records from Notion task DB")
+def notion_task_list_records(
+    page_size: int = 50,
+    start_cursor: str | None = None,
+    title_contains: str | None = None,
+) -> dict[str, Any]:
+    return _as_dict(
+        task_db.action_list_records(
+            page_size=page_size,
+            start_cursor=start_cursor,
+            title_contains=title_contains,
+        )
+    )
+
+@mcp.tool(name="notion_add_task", description="Create a new task in Notion Task DB")
+def notion_add_task(
+    title: str,
+    properties: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _as_dict(task_db.action_add_task(title=title, properties=properties))
+
+@mcp.tool(name="notion_update_task", description="Update properties of an existing Notion task page")
+def notion_update_task(
+    page_id: str,
+    properties: dict[str, Any],
+) -> dict[str, Any]:
+    return _as_dict(task_db.action_update_task(page_id=page_id, properties=properties))
+
+@mcp.tool(name="notion_append_task_content", description="Append new markdown content to an existing Notion task page")
+def notion_append_task_content(
+    page_id: str,
+    markdown_content: str,
+) -> dict[str, Any]:
+    return _as_dict(task_db.action_append_task_content(page_id=page_id, markdown_content=markdown_content))
 
 
 # ── Long-term Memory Tools ──────────────────────────────────────────
