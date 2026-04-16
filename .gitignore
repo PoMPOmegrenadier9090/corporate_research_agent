@@ -12,3 +12,5 @@ __pycache__
 data
 
 bot/sessions.db
+
+chroma_data/

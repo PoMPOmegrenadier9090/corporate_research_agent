@@ -10,6 +10,7 @@ from tools.normalize_financials.parser import parse_financial_value
 from tools.stock_code_search.main import search as stock_code_search_impl
 from tools.web_search.main import search_web
 from tools.notion import company_db, episode_db
+from tools.memory import actions as memory_actions
 
 
 mcp = FastMCP(
@@ -132,6 +133,50 @@ def notion_episode_get_content(
             start_cursor=start_cursor,
         )
     )
+
+
+# ── Long-term Memory Tools ──────────────────────────────────────────
+
+@mcp.tool(
+    name="memory_store",
+    description=(
+        "Store a piece of knowledge in long-term memory. "
+        "Use this to remember user preferences, important facts, learnings, or task results "
+        "that should persist across sessions. "
+        "category must be one of: facts, learnings, task results. "
+    ),
+)
+def memory_store(
+    content: str,
+    category: str,
+    source: str | None = None,
+) -> dict[str, Any]:
+    return _as_dict(memory_actions.action_store(content=content, category=category, source=source))
+
+
+@mcp.tool(
+    name="memory_search",
+    description=(
+        "Search long-term memory for knowledge relevant to a query. "
+        "Use this before answering questions that may require past context, "
+        "user preferences, or previously learned information. "
+        "Returns the most semantically similar memories ranked by relevance."
+    ),
+)
+def memory_search(
+    query: str,
+    n_results: int = 5,
+    category: str | None = None,
+) -> dict[str, Any]:
+    return _as_dict(memory_actions.action_search(query=query, n_results=n_results, category=category))
+
+
+@mcp.tool(
+    name="memory_delete",
+    description="Delete a specific memory entry by its ID. Use when a memory is outdated or incorrect.",
+)
+def memory_delete(memory_id: str) -> dict[str, Any]:
+    return _as_dict(memory_actions.action_delete(memory_id=memory_id))
 
 
 if __name__ == "__main__":
