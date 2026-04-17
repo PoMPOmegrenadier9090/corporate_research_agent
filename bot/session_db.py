@@ -71,6 +71,32 @@ def create_thread_session(
         conn.commit()
 
 
+def upsert_thread_session(
+    thread_id: str,
+    session_id: str,
+    first_prompt: str,
+    status: str = "active",
+    db_path: str = DEFAULT_DB_PATH,
+) -> None:
+    """Create or replace a session mapping for the conversation key."""
+    now = _utc_now()
+    with _connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO thread_sessions(thread_id, session_id, first_prompt, status, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?)
+            ON CONFLICT(thread_id)
+            DO UPDATE SET
+                session_id=excluded.session_id,
+                first_prompt=excluded.first_prompt,
+                status=excluded.status,
+                updated_at=excluded.updated_at
+            """,
+            (thread_id, session_id, first_prompt, status, now, now),
+        )
+        conn.commit()
+
+
 def touch_thread_session(
     thread_id: str,
     status: str = "active",

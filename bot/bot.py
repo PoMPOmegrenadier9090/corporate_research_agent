@@ -2,7 +2,7 @@ import discord
 import os
 import aiohttp
 import asyncio
-from session_db import init_db, get_thread_session, create_thread_session, touch_thread_session
+from session_db import init_db, get_thread_session, touch_thread_session, upsert_thread_session
 
 # Intents to allow message content
 intents = discord.Intents.default()
@@ -16,12 +16,15 @@ API_URL = os.getenv('API_URL', 'http://gemini-agent:8000/ask')
 
 REQUEST_QUEUE: asyncio.Queue[dict] = asyncio.Queue()
 COOLDOWN_SECONDS = 10
+GLOBAL_SESSION_KEY = os.getenv('GLOBAL_SESSION_KEY', '__global_non_thread__')
 
 
-def _resolve_thread_id(message: discord.Message) -> str | None:
+def _resolve_thread_id(message: discord.Message) -> str:
+    """DiscordのThread IDを返す．Threadでない場合はグローバルキーを返す．"""
     if isinstance(message.channel, discord.Thread):
         return str(message.channel.id)
-    return None
+    # Non-thread messages are routed to a shared session key.
+    return GLOBAL_SESSION_KEY
 
 
 async def _send_chunked_reply(channel: discord.abc.Messageable, text: str):
@@ -53,9 +56,9 @@ async def _process_request(item: dict):
     force_new: bool = item['force_new']
 
     thread_id = _resolve_thread_id(message)
-    if not thread_id:
-        await message.channel.send("Error: この機能はDiscord thread内でのみ利用できます。")
-        return
+    is_non_thread_channel = not isinstance(message.channel, discord.Thread)
+    if is_non_thread_channel:
+        await message.channel.send("[Shared Session]")
 
     try:
         existing = get_thread_session(thread_id)
@@ -65,9 +68,12 @@ async def _process_request(item: dict):
 
     # --- 新規セッション開始の処理 ---
     if force_new:
-        if existing:
-            await message.channel.send("Error: このthreadには既にsessionが紐づいています。新規sessionは開始できません。")
+        if existing and not is_non_thread_channel:
+            await message.channel.send("Error: この会話には既にsessionが紐づいています。新規sessionは開始できません。")
             return
+
+        if existing and is_non_thread_channel:
+            await message.channel.send("[Shared Session] 既存セッションを上書きして新規開始します。")
 
         async with message.channel.typing():
             data, error = await _call_agent(prompt=prompt, session_id=None)
@@ -82,8 +88,7 @@ async def _process_request(item: dict):
             return
 
         try:
-            create_thread_session(thread_id=thread_id, session_id=session_id, first_prompt=prompt)
-            touch_thread_session(thread_id, status='active')
+            upsert_thread_session(thread_id=thread_id, session_id=session_id, first_prompt=prompt)
         except Exception as e:
             await _send_chunked_reply(message.channel, f"Error: session mapping save failed: {str(e)}")
             return
@@ -94,13 +99,31 @@ async def _process_request(item: dict):
 
     # --- 既存セッションでのやりとりの処理 ---
     if not existing:
-        await message.channel.send("Error: このthreadにはsessionがありません。最初に `/new <prompt>` を実行してください。")
+        await message.channel.send("Error: この会話にはsessionがありません。最初に `/new <prompt>` を実行してください。")
         return
 
     session_id = existing['session_id']
 
     async with message.channel.typing():
         data, error = await _call_agent(prompt=prompt, session_id=session_id)
+
+    # ローカルにsessionが存在しない場合は，セッションを再構築する
+    if error and "Invalid session identifier" in error:
+        # Self-heal: recreate session when stored session_id is stale/invalid.
+        await message.channel.send("[Shared Session] セッションが無効化されていたため再作成します。")
+        async with message.channel.typing():
+            data, error = await _call_agent(prompt=prompt, session_id=None)
+
+        if not error and data and data.get('session_id'):
+            try:
+                upsert_thread_session(
+                    thread_id=thread_id,
+                    session_id=data['session_id'],
+                    first_prompt=prompt,
+                )
+            except Exception as e:
+                await _send_chunked_reply(message.channel, f"Error: session mapping refresh failed: {str(e)}")
+                return
 
     if error:
         await _send_chunked_reply(message.channel, f"Error from Gemini API: {error}")

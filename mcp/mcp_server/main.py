@@ -9,7 +9,9 @@ from tools.IR_fetch.main import fetch_data as ir_fetch_impl
 from tools.normalize_financials.parser import parse_financial_value
 from tools.stock_code_search.main import search as stock_code_search_impl
 from tools.web_search.main import search_web
-from tools.notion import company_db, episode_db
+from tools.notion import company_db, episode_db, task_db
+from tools.memory import actions as memory_actions
+from tools.gmail_search.main import search_emails as gmail_search_impl
 
 
 mcp = FastMCP(
@@ -132,6 +134,109 @@ def notion_episode_get_content(
             start_cursor=start_cursor,
         )
     )
+
+# ── Gmail Tools ──────────────────────────────────────────
+
+@mcp.tool(
+    name="gmail_search_emails",
+    description="Search Gmail emails by query with configurable lookback window and body truncation",
+)
+def gmail_search_emails(
+    query: str,
+    max_results: int = 10,
+    lookback_days: int = 14,
+    body_max_chars: int = 3000,
+) -> dict[str, Any]:
+    return _as_dict(
+        gmail_search_impl(
+            query=query,
+            max_results=max_results,
+            lookback_days=lookback_days,
+            body_max_chars=body_max_chars,
+        )
+    )
+
+
+# ── Task Database Tools ──────────────────────────────────────────
+
+@mcp.tool(name="notion_task_list_records", description="List records from Notion task DB")
+def notion_task_list_records(
+    page_size: int = 50,
+    start_cursor: str | None = None,
+    title_contains: str | None = None,
+) -> dict[str, Any]:
+    return _as_dict(
+        task_db.action_list_records(
+            page_size=page_size,
+            start_cursor=start_cursor,
+            title_contains=title_contains,
+        )
+    )
+
+@mcp.tool(name="notion_add_task", description="Create a new task in Notion Task DB")
+def notion_add_task(
+    title: str,
+    properties: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _as_dict(task_db.action_add_task(title=title, properties=properties))
+
+@mcp.tool(name="notion_update_task", description="Update properties of an existing Notion task page")
+def notion_update_task(
+    page_id: str,
+    properties: dict[str, Any],
+) -> dict[str, Any]:
+    return _as_dict(task_db.action_update_task(page_id=page_id, properties=properties))
+
+@mcp.tool(name="notion_append_task_content", description="Append new markdown content to an existing Notion task page")
+def notion_append_task_content(
+    page_id: str,
+    markdown_content: str,
+) -> dict[str, Any]:
+    return _as_dict(task_db.action_append_task_content(page_id=page_id, markdown_content=markdown_content))
+
+
+# ── Long-term Memory Tools ──────────────────────────────────────────
+
+@mcp.tool(
+    name="memory_store",
+    description=(
+        "Store a piece of knowledge in long-term memory. "
+        "Use this to remember user preferences, important facts, learnings, or task results "
+        "that should persist across sessions. "
+        "category must be one of: facts, learnings, task results. "
+    ),
+)
+def memory_store(
+    content: str,
+    category: str,
+    source: str | None = None,
+) -> dict[str, Any]:
+    return _as_dict(memory_actions.action_store(content=content, category=category, source=source))
+
+
+@mcp.tool(
+    name="memory_search",
+    description=(
+        "Search long-term memory for knowledge relevant to a query. "
+        "Use this before answering questions that may require past context, "
+        "user preferences, or previously learned information. "
+        "Returns the most semantically similar memories ranked by relevance."
+    ),
+)
+def memory_search(
+    query: str,
+    n_results: int = 5,
+    category: str | None = None,
+) -> dict[str, Any]:
+    return _as_dict(memory_actions.action_search(query=query, n_results=n_results, category=category))
+
+
+@mcp.tool(
+    name="memory_delete",
+    description="Delete a specific memory entry by its ID. Use when a memory is outdated or incorrect.",
+)
+def memory_delete(memory_id: str) -> dict[str, Any]:
+    return _as_dict(memory_actions.action_delete(memory_id=memory_id))
 
 
 if __name__ == "__main__":

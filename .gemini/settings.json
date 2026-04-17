@@ -81,7 +81,15 @@
         "notion_get_content",
         "notion_append_research",
         "notion_episode_list_records",
-        "notion_episode_get_content"
+        "notion_episode_get_content",
+        "notion_task_list_records",
+        "notion_add_task",
+        "notion_update_task",
+        "notion_append_task_content",
+        "gmail_search_emails",
+        "memory_store",
+        "memory_search",
+        "memory_delete"
       ]
     }
   }

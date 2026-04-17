@@ -11,6 +11,7 @@
     "業種": "multi_select",
     "志望度": "select",
     "業界": "select",
-    "応募状況": "status"
+    "応募状況": "status",
+    "URL": "text"
   }
 }

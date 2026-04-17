@@ -274,16 +274,16 @@ def action_list_records(
     }
 
 
-def action_add_company(company_name: str):
-    """DBに新しい企業ページを作成する"""
-    existing = action_get(company_name)
+def action_add_record(title: str, properties: dict[str, Any] | None = None) -> dict[str, Any]:
+    """DBに新しいページを作成する"""
+    existing = action_get(title)
     if existing.get("error"):
         return existing
 
     if existing.get("exists"):
         return {
             "status": "skipped",
-            "message": f"企業 '{company_name}' は既に存在するため追加しませんでした。",
+            "message": f"'{title}' は既に存在するため追加しませんでした。",
             "page_id": existing.get("page_id"),
         }
 
@@ -295,7 +295,7 @@ def action_add_company(company_name: str):
         "parent": {"database_id": db_id},
         "properties": {
             COMPANY_TITLE_PROPERTY_NAME: {
-                "title": [{"text": {"content": company_name}}],
+                "title": [{"text": {"content": title}}],
             }
         },
     }
@@ -308,13 +308,24 @@ def action_add_company(company_name: str):
 
     try:
         new_page = cast(dict[str, Any], notion.pages.create(**new_page_data))
+        page_id = new_page["id"]
+        
+        # If additional properties are provided, update them.
+        if properties:
+            import json
+            action_update_properties(page_id, json.dumps(properties))
+
         return {
             "status": "success",
-            "message": f"企業 '{company_name}' を追加しました。",
-            "page_id": new_page["id"],
+            "message": f"'{title}' を追加しました。",
+            "page_id": page_id,
         }
     except Exception as e:
         return {"error": f"ページの作成に失敗しました: {str(e)}"}
+
+def action_add_company(company_name: str):
+    """DBに新しい企業ページを作成する"""
+    return action_add_record(title=company_name)
 
 
 def action_update_properties(page_id: str, updates_json: str):

@@ -1,4 +1,16 @@
 services:
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - ./chroma_data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+
   mcp-tools:
     build:
       context: ./mcp
@@ -12,11 +24,15 @@ services:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=9001
       - MCP_PATH=/mcp
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
     command: uv run -m mcp_server.main
     volumes:
       - ./mcp:/app
     expose:
       - "9001"
+    depends_on:
+      - chromadb
     restart: unless-stopped
 
   gemini-agent:
