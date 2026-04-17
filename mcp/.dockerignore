@@ -1,0 +1,25 @@
+# Python cache/artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local virtual envs
+.venv/
+venv/
+
+# VCS / editor
+.git/
+.gitignore
+.vscode/
+
+# Test artifacts
+htmlcov/
+.coverage
+
+# Local data and logs
+*.log
+*.sqlite

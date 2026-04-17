@@ -137,9 +137,25 @@ def notion_episode_get_content(
 
 # ── Gmail Tools ──────────────────────────────────────────
 
-@mcp.tool(name="gmail_search_emails", description="Search Gmail for messages matching query within the last 14 days")
-def gmail_search_emails(query: str, max_results: int = 10) -> dict[str, Any]:
-    return _as_dict(gmail_search_impl(query=query, max_results=max_results))
+@mcp.tool(
+    name="gmail_search_emails",
+    description="Search Gmail emails by query with configurable lookback window and body truncation",
+)
+def gmail_search_emails(
+    query: str,
+    max_results: int = 10,
+    lookback_days: int = 14,
+    body_max_chars: int = 3000,
+) -> dict[str, Any]:
+    return _as_dict(
+        gmail_search_impl(
+            query=query,
+            max_results=max_results,
+            lookback_days=lookback_days,
+            body_max_chars=body_max_chars,
+        )
+    )
+
 
 # ── Task Database Tools ──────────────────────────────────────────
 
