@@ -1,5 +1,5 @@
 {
-  "name": "company",
+  "name": "episode",
   "db_id_env_key": "NOTION_EPISODE_DB_ID",
   "template_id_env_key": "",
   "title_property_name": "名前",

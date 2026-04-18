@@ -58,15 +58,37 @@ def format_property_value(prop_name, raw_value):
     return notion_main.format_property_value(prop_name, raw_value)
 
 
-def action_get(company_name: str):
+def _build_company_query_candidates(company_name: str, aliases: list[str] | None = None) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    # クエリ名を正規化しつつ，重複を排除してクエリ候補リストを構築
+    for name in [company_name, *(aliases or [])]:
+        normalized = str(name).strip()
+        if not normalized:
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append(normalized)
+
+    return candidates
+
+
+def action_get(company_name: str, aliases: list[str] | None = None):
     _ensure_and_sync()
-    result = notion_main.action_get(company_name)
-    if isinstance(result, dict):
-        query = result.get("query")
-        if query is None:
-            query = company_name
-        result.setdefault("company_name", query)
-    return result
+    query_candidates = _build_company_query_candidates(company_name, aliases)
+    result = notion_main.action_get_many(query_candidates)
+    if not isinstance(result, dict):
+        return {"error": "検索結果の取得に失敗しました。"}
+
+    if result.get("error"):
+        return result
+
+    output = dict(result)
+    output["company_name"] = company_name
+    return output
 
 
 def action_add_company(company_name: str):

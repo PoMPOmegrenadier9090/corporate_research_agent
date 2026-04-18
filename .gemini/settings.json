@@ -83,6 +83,7 @@
         "notion_episode_list_records",
         "notion_episode_get_content",
         "notion_task_list_records",
+        "notion_task_get_schema",
         "notion_add_task",
         "notion_update_task",
         "notion_append_task_content",

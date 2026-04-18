@@ -110,37 +110,80 @@ def format_property_value(prop_name, raw_value):
         return {"multi_select": [{"name": item} for item in items if item]}
     if ptype == "status":
         return {"status": {"name": str(raw_value)}}
+    if ptype == "date":
+        if isinstance(raw_value, dict):
+            start = raw_value.get("start")
+            if not start:
+                return None
+            payload = {"start": str(start)}
+            end = raw_value.get("end")
+            time_zone = raw_value.get("time_zone")
+            if end:
+                payload["end"] = str(end)
+            if time_zone:
+                payload["time_zone"] = str(time_zone)
+            return {"date": payload}
+        if raw_value is None or str(raw_value).strip() == "":
+            return {"date": None}
+        return {"date": {"start": str(raw_value)}}
+    if ptype == "relation":
+        relation_items = []
+        if isinstance(raw_value, list):
+            for item in raw_value:
+                if isinstance(item, dict):
+                    page_id = item.get("id")
+                    if page_id:
+                        relation_items.append({"id": str(page_id)})
+                elif item:
+                    relation_items.append({"id": str(item)})
+        elif isinstance(raw_value, dict):
+            page_id = raw_value.get("id")
+            if page_id:
+                relation_items.append({"id": str(page_id)})
+        elif raw_value:
+            relation_items.append({"id": str(raw_value)})
+        return {"relation": relation_items}
+    if ptype == "files":
+        return None
     return {"rich_text": [{"text": {"content": str(raw_value)}}]}
 
 
 def action_get(company_name: str):
-    """タイトル文字列でDBを検索し、ページの存在有無と詳細情報を返す。"""
-    title_query = company_name
+    """単一タイトルを検索する互換ラッパー。"""
+    return action_get_many([company_name])
+
+
+def action_get_many(company_names: list[str]):
+    """複数候補でDBを検索し、全候補に対するページ存在有無と詳細情報を返す。"""
+    query_candidates = _normalize_query_candidates(company_names)
+    primary_query = query_candidates[0] if query_candidates else ""
 
     try:
-        datasource_info = _query_datasource_pages()
-        results = cast(list[dict[str, Any]], datasource_info.get("results", []))
-        log_action("action_get", results)
+        results = _query_all_datasource_pages()
+        log_action("action_get_many", results)
     except Exception as e:
         return {"error": f"データソースの取得またはクエリに失敗しました: {str(e)}"}
 
     if not results:
         return {
             "exists": False,
-            "query": title_query,
+            "query": primary_query,
+            "query_candidates": query_candidates,
             "message": "データソースからレコードを取得できませんでした",
         }
 
-    target_page = _find_page_by_title(results, title_query)
+    matched_pages = _find_pages_by_titles(results, query_candidates)
 
-    if not target_page:
+    if not matched_pages:
+        not_found_query = primary_query or " / ".join(query_candidates)
         return {
             "exists": False,
-            "query": title_query,
-            "message": f"'{title_query}' は存在しません。",
+            "query": primary_query,
+            "query_candidates": query_candidates,
+            "message": f"'{not_found_query}' は存在しません。",
         }
 
-    page_id = target_page["id"]
+    target_page = matched_pages[0]
     properties = target_page["properties"]
 
     empty_props = []
@@ -167,8 +210,17 @@ def action_get(company_name: str):
 
     return {
         "exists": True,
-        "page_id": page_id,
-        "query": title_query,
+        "page_id": target_page["id"],
+        "query": primary_query,
+        "query_candidates": query_candidates,
+        "match_count": len(matched_pages),
+        "matches": [
+            {
+                "page_id": str(page.get("id", "")),
+                "title": _extract_page_title(page),
+            }
+            for page in matched_pages
+        ],
         "title_property": COMPANY_TITLE_PROPERTY_NAME,
         "empty_properties": empty_props,
         "filled_properties": filled_props,
@@ -188,23 +240,122 @@ def _query_datasource_pages(
     db_info = cast(dict[str, Any], notion.databases.retrieve(db_id))
     data_source_id = db_info["data_sources"][0]["id"]
 
-    query: dict[str, Any] = {
-        "data_source_id": data_source_id,
-    }
+    query: dict[str, Any] = {}
     if page_size is not None:
         query["page_size"] = page_size
     if start_cursor:
         query["start_cursor"] = start_cursor
-    # カーソルを指定してクエリ実行
+
+    query["data_source_id"] = data_source_id
     return cast(dict[str, Any], notion.data_sources.query(**query))
 
 
+def _query_all_datasource_pages(page_size: int = 100, max_pages: int = 100) -> list[dict[str, Any]]:
+    """データソースの全ページを安全に取得する（ページネーション対応）。"""
+    all_results: list[dict[str, Any]] = []
+    cursor: str | None = None
+    seen_cursors: set[str] = set()
+
+    for _ in range(max_pages):
+        response = _query_datasource_pages(page_size=page_size, start_cursor=cursor)
+        results = response.get("results", [])
+        if isinstance(results, list):
+            all_results.extend(cast(list[dict[str, Any]], results))
+
+        has_more = bool(response.get("has_more", False))
+        next_cursor = cast(str | None, response.get("next_cursor"))
+
+        if not has_more or not next_cursor:
+            break
+        if next_cursor in seen_cursors:
+            # Guard against unexpected cursor cycles.
+            break
+
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+
+    return all_results
+
+
+def _normalize_company_name(name: str) -> str:
+    normalized = name.lower().strip()
+    normalized = re.sub(r"[\s\-_/()（）【】\[\]{}・,.]", "", normalized)
+    return normalized
+
+
+def _normalize_query_candidates(company_names: list[str]) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    for name in company_names:
+        normalized = str(name).strip()
+        if not normalized:
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append(normalized)
+
+    return candidates
+
+
 def _find_page_by_title(pages: list[dict[str, Any]], title_query: str) -> dict[str, Any] | None:
+    matches = _find_pages_by_titles(pages, [title_query])
+    return matches[0] if matches else None
+
+
+def _find_pages_by_title(pages: list[dict[str, Any]], title_query: str) -> list[dict[str, Any]]:
+    return _find_pages_by_titles(pages, [title_query])
+
+
+def _find_pages_by_titles(pages: list[dict[str, Any]], title_queries: list[str]) -> list[dict[str, Any]]:
+    direct_matches: list[dict[str, Any]] = []
+    normalized_matches: list[dict[str, Any]] = []
+
+    normalized_queries: list[tuple[str, str, bool]] = []
+    for title_query in title_queries:
+        normalized_query = _normalize_company_name(title_query)
+        if not normalized_query:
+            continue
+        normalized_queries.append((title_query, normalized_query, len(normalized_query) >= 3))
+
     for page in pages:
         title = _extract_page_title(page)
-        if title_query in title:
-            return page
-    return None
+        normalized_title = _normalize_company_name(title)
+        if not title and not normalized_title:
+            continue
+        # クエリとの直接一致を探索
+        direct_matched = False
+        for title_query, _, _ in normalized_queries:
+            if title_query and title and title_query in title:
+                direct_matches.append(page)
+                direct_matched = True
+                break
+        if direct_matched or not normalized_title:
+            continue
+
+        for _, normalized_query, use_contains_for_normalized in normalized_queries:
+            if use_contains_for_normalized:
+                if normalized_query in normalized_title:
+                    normalized_matches.append(page)
+                    break
+            elif normalized_query == normalized_title:
+                normalized_matches.append(page)
+
+    # Keep direct matches first, then add normalized-only matches without duplicates.
+    seen_page_ids: set[str] = set()
+    merged: list[dict[str, Any]] = []
+
+    for page in [*direct_matches, *normalized_matches]:
+        pid = str(page.get("id", ""))
+        if pid and pid in seen_page_ids:
+            continue
+        if pid:
+            seen_page_ids.add(pid)
+        merged.append(page)
+
+    return merged
 
 
 def _extract_page_title(page: dict[str, Any]) -> str:
@@ -274,6 +425,83 @@ def action_list_records(
     }
 
 
+def action_get_schema() -> dict[str, Any]:
+    """アクティブprofileのNotion DBスキーマを取得する（Notion API基準）。"""
+    notion = get_notion_client()
+    db_id = get_db_id()
+
+    try:
+        db_info = cast(dict[str, Any], notion.databases.retrieve(db_id))
+    except Exception as e:
+        return {"error": f"スキーマ取得に失敗しました: {str(e)}"}
+
+    raw_properties = db_info.get("properties", {})
+    schema_source = "database"
+
+    # Some Notion workspaces expose effective schema on data_source side.
+    if not isinstance(raw_properties, dict) or not raw_properties:
+        data_sources = db_info.get("data_sources", [])
+        if isinstance(data_sources, list) and data_sources:
+            first = data_sources[0]
+            if isinstance(first, dict) and first.get("id"):
+                ds_id = str(first["id"])
+                data_sources_api = getattr(notion, "data_sources", None)
+                ds_retrieve = getattr(data_sources_api, "retrieve", None) if data_sources_api is not None else None
+                if ds_retrieve is not None:
+                    try:
+                        ds_info = cast(dict[str, Any], ds_retrieve(ds_id))
+                        ds_props = ds_info.get("properties", {})
+                        if isinstance(ds_props, dict) and ds_props:
+                            raw_properties = ds_props
+                            schema_source = "data_source"
+                    except Exception:
+                        pass
+
+    if not isinstance(raw_properties, dict):
+        raw_properties = {}
+
+    properties: list[dict[str, Any]] = []
+    for prop_name, prop_def in raw_properties.items():
+        if not isinstance(prop_def, dict):
+            continue
+
+        prop_type = str(prop_def.get("type", "unknown"))
+        type_payload = prop_def.get(prop_type)
+
+        item: dict[str, Any] = {
+            "name": str(prop_name),
+            "id": str(prop_def.get("id", "")),
+            "type": prop_type,
+            "profile_type": PROPERTY_TYPES.get(str(prop_name)),
+        }
+
+        if prop_type in {"select", "multi_select", "status"} and isinstance(type_payload, dict):
+            options = type_payload.get("options", [])
+            if isinstance(options, list):
+                item["options"] = [
+                    str(opt.get("name", ""))
+                    for opt in options
+                    if isinstance(opt, dict) and opt.get("name")
+                ]
+
+        if prop_type == "relation" and isinstance(type_payload, dict):
+            relation_db_id = type_payload.get("database_id")
+            if relation_db_id:
+                item["relation_database_id"] = str(relation_db_id)
+
+        properties.append(item)
+
+    return {
+        "status": "success",
+        "profile": ACTIVE_PROFILE_NAME,
+        "database_id": db_id,
+        "schema_source": schema_source,
+        "title_property": COMPANY_TITLE_PROPERTY_NAME,
+        "property_count": len(properties),
+        "properties": properties,
+    }
+
+
 def action_add_record(title: str, properties: dict[str, Any] | None = None) -> dict[str, Any]:
     """DBに新しいページを作成する"""
     existing = action_get(title)
@@ -309,17 +537,29 @@ def action_add_record(title: str, properties: dict[str, Any] | None = None) -> d
     try:
         new_page = cast(dict[str, Any], notion.pages.create(**new_page_data))
         page_id = new_page["id"]
-        
+
+        property_update_result: dict[str, Any] | None = None
         # If additional properties are provided, update them.
         if properties:
-            import json
-            action_update_properties(page_id, json.dumps(properties))
+            property_update_result = action_update_properties(page_id, json.dumps(properties))
 
-        return {
+            # The page was already created; expose property update failure explicitly.
+            if property_update_result.get("error"):
+                return {
+                    "status": "partial_success",
+                    "message": f"'{title}' を追加しましたが、プロパティ更新に失敗しました。",
+                    "page_id": page_id,
+                    "property_update": property_update_result,
+                }
+
+        response: dict[str, Any] = {
             "status": "success",
             "message": f"'{title}' を追加しました。",
             "page_id": page_id,
         }
+        if property_update_result is not None:
+            response["property_update"] = property_update_result
+        return response
     except Exception as e:
         return {"error": f"ページの作成に失敗しました: {str(e)}"}
 
@@ -678,6 +918,8 @@ def _dispatch_action(args: argparse.Namespace) -> dict[str, Any]:
                 start_cursor=args.start_cursor,
             ),
         )
+    if args.action == "get_schema":
+        return cast(dict[str, Any], action_get_schema())
     return {"error": f"Unsupported action: {args.action}"}
 
 
@@ -716,6 +958,8 @@ def _build_parser(default_profile: str, allow_profile_flag: bool) -> argparse.Ar
     parser_get_content.add_argument("--max_depth", type=int, default=3, help="Max child depth to traverse")
     parser_get_content.add_argument("--page_size", type=int, default=50, help="Top-level page size for block pagination")
     parser_get_content.add_argument("--start_cursor", required=False, help="Cursor for top-level pagination")
+
+    subparsers.add_parser("get_schema", help="Get property schema of the current profile DB")
 
     return parser
 

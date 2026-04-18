@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 from typing import Any
 
 from fastmcp import FastMCP
@@ -21,6 +22,9 @@ mcp = FastMCP(
         "Notion write tools when explicit updates are requested."
     ),
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def _as_dict(result: Any) -> dict[str, Any]:
@@ -67,9 +71,12 @@ def stock_code_search(queries: list[str]) -> dict[str, Any]:
     return {"items": output}
 
 
-@mcp.tool(name="notion_search_company", description="Find company page by title in Notion company DB")
-def notion_search_company(company_name: str) -> dict[str, Any]:
-    return _as_dict(company_db.action_get(company_name))
+@mcp.tool(
+    name="notion_search_company",
+    description="Find company pages by title in Notion company DB. Supports alias list and returns all matches. It's recommended to input japanese and english company names in aliases for better search results.",
+)
+def notion_search_company(company_name: str, aliases: list[str] | None = None) -> dict[str, Any]:
+    return _as_dict(company_db.action_get(company_name, aliases=aliases))
 
 
 @mcp.tool(name="notion_add_company", description="Add a company page into Notion company DB if not exists")
@@ -173,14 +180,32 @@ def notion_task_list_records(
         )
     )
 
-@mcp.tool(name="notion_add_task", description="Create a new task in Notion Task DB")
+@mcp.tool(name="notion_task_get_schema", description="Get Task DB property schema from Notion API")
+def notion_task_get_schema() -> dict[str, Any]:
+    return _as_dict(task_db.action_get_schema())
+
+
+@mcp.tool(
+    name="notion_add_task",
+    description=(
+        "Create a new task in Notion Task DB. "
+        "properties supports profile-based fields, e.g. "
+        "{'カテゴリ':['選考'],'日付':{'start':'2026-04-23'},'企業':[{'id':'<page_id>'}]}"
+    ),
+)
 def notion_add_task(
     title: str,
     properties: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return _as_dict(task_db.action_add_task(title=title, properties=properties))
 
-@mcp.tool(name="notion_update_task", description="Update properties of an existing Notion task page")
+@mcp.tool(
+    name="notion_update_task",
+    description=(
+        "Update properties of an existing Notion task page. "
+        "On your first execution, use notion_task_get_schema ahead to validate property names and types."
+    ),
+)
 def notion_update_task(
     page_id: str,
     properties: dict[str, Any],
@@ -241,6 +266,7 @@ def memory_delete(memory_id: str) -> dict[str, Any]:
 
 if __name__ == "__main__":
     transport = os.getenv("MCP_TRANSPORT", "stdio")
+    logger.warning("mcp_server starting transport=%s", transport)
 
     if transport == "stdio":
         mcp.run()
@@ -252,8 +278,8 @@ if __name__ == "__main__":
 
         import uvicorn
 
-        uvicorn.run(
-            app,
-            host=os.getenv("MCP_HOST", "0.0.0.0"),
-            port=int(os.getenv("MCP_PORT", "9001")),
-        )
+        host = os.getenv("MCP_HOST", "0.0.0.0")
+        port = int(os.getenv("MCP_PORT", "9001"))
+        logger.warning("mcp_server http listening on %s:%s%s", host, port, os.getenv("MCP_PATH", "/mcp"))
+
+        uvicorn.run(app, host=host, port=port, log_level="info")

@@ -1,67 +1,45 @@
 ---
 name: schedule-from-email-workflow
-description: 新着予定・最新の選考情報の確認や管理が必要なときに、メール検索から予定抽出、ユーザー確認、Notion Task DBへの登録までを段階的に実行するワークフロー。
+description: メールの予定抽出からユーザー確認を経て、Notion Task DBへ登録する一連のフロー．企業の最新イベント・選考情報などについて質問された際に使用．
 ---
 
 # Schedule From Email Workflow
 
-新着の予定確認を依頼されたとき、または確認が必要だと判断したときに使うワークフローです。
+## 1. Core Workflow
+1. **Search**: `gmail_search_emails` で関連メールを取得 (クエリは企業名等に限定)
+2. **Extract & Present**: メール本文から 日時・企業・イベント名・URL を抽出し，ユーザーに提示．追加の許可を得る．
+4. **Company Resolution**: `notion_search_company()` で企業IDを取得．この際，日本語名とともに英語名をaliasesに含める (マッチ複数時は尤もらしいものを選択．該当なし時は設定を省略)
+3. **Schema Check**: `notion_task_get_schema()` を実行し、使用可能なプロパティ名と型(`multi_select`, `date`, `relation`等)を**絶対の基準**とする
+5. **Create**: ユーザー許可後、重複確認(`notion_task_list_records`)の上、`notion_add_task` を実行．この際，**確認できた情報に関してはスキーマに従ってプロパティ設定する**
+6. **Append Notes**: `notion_append_task_content` で概要、参考URL、根拠メール(subject/date/id)を追記
 
-## Workflow
 
-1. Keyword Generation
-- ユーザーの質問や文脈から、予定検索に使うキーワードを作る。
-- 例: 会社名、イベント種別、日付語（締切、面談、説明会、インターン、一次締切 など）。
+## 2. Property Mapping Strict Rules
+例外なく `notion_task_get_schema()` の結果に完全一致させること。定義にないプロパティは引数に含めない。
 
-2. Fetch Emails via MCP
-- `gmail_search_emails` を使って関連メールを取得する。
-- `query` は生成したキーワードを中心に作る。
-- `max_results` は必要最小限（例: 5-20件）で開始する。
+| 型 | 設定方法・フォーマット | 備考 |
+| --- | --- | --- |
+| **Title** | `notion_add_task(title="...")` | `properties`の中ではなく引数で直接指定 |
+| **multi_select** | `{"カテゴリ": ["選考"]}` | `options`に完全一致する値のみ指定可 |
+| **date** | `{"日付": "2026-04-23"}`<br>時間指定: `{"日付": {"start": "2026-04-23T23:59", "time_zone": "Asia/Tokyo"}}` | 形式に注意 |
+| **relation** | `{"企業": {"id": "<page_id>"}}` | 該当企業が存在しない場合はこのプロパティ設定自体を省略し、本文に企業名を記載 |
 
-3. Analyze and Extract Relevant Schedules
-- メール本文から予定情報を抽出する。
-- 抽出対象:
-  - タイトル
-  - 日時
-  - 締切
-  - 企業名/主催
-  - 参加URLや応募URL
-  - 根拠（どのメールから抽出したか）
-- 質問に無関係な予定は除外する。
+## 3. Mandatory Rules
+- **No Implicit Write**: ユーザーの明示指示前に `notion_add_task` を決して呼ばない。
+- **Strict Schema**: エラー時は必ずスキーマを再確認し、存在しない項目や選択肢を設定しない。
+- **Dedup Before Create**: 作成前に同一予定（タイトル・日時・企業）が存在しないか確認する。
+- **Traceability**: 予定の根拠となったメールの subject, date, id は必ず本文に追記する。
 
-4. Present to User First
-- 抽出結果を一度ユーザーに提示する。
-- この時点では Notion へ書き込まない。
-- 不明点（日時不明、重複候補、曖昧表現）は明示する。
+## 4. Output Contract (ユーザー提示時)
+抽出結果は以下の形式で簡潔に提示し、登録の許可を求める。
 
-5. Add to Notion Task DB Only on Explicit Instruction
-- ユーザーから追加指示があった場合のみ `notion_add_task` を実行する。
-- 必要に応じて `notion_task_list_records` で既存タスクの重複確認を行う。
-- すでにあるタスクで追記情報がある場合は `notion_append_task_content` を使う。
+```
+📋 検索結果: N 件の予定候補
 
-## Mandatory Rules
+- **[イベント名]** (日時: ..., 企業: DB登録済/未登録)
+  - 根拠メール: Subject "...", Date "..."
 
-1. No implicit write:
-- ユーザーの明示指示なしに `notion_add_task` を呼ばない。
+⚠️ 確認事項: (日時が曖昧、企業が未登録でDB紐付けできない等があれば記載)
 
-2. Relevance first:
-- ユーザー質問との関連性が弱い予定は候補から除外する。
-
-3. Traceability:
-- 抽出した予定には根拠メール（subject/date/id）の参照情報を残す。
-
-4. Dedup before create:
-- 同一予定の重複登録を避ける。タイトル・日時・企業名で照合する。
-
-## Output Contract
-
-ユーザー提示時は、次の形式で簡潔にまとめる。
-
-- 候補予定一覧（箇条書き）
-  - 件名/イベント名
-  - 日時・締切
-  - 企業名
-  - 参考リンク
-  - 根拠メール（subject, date, id）
-- 追加対象として推奨する予定
-- 不明点・確認事項
+これらの予定を Notion に追加してもよろしいですか？
+```
