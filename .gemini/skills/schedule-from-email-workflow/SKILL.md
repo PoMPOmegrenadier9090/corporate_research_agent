@@ -30,6 +30,11 @@ description: メールの予定抽出からユーザー確認を経て、Notion 
 - **Dedup Before Create**: 作成前に同一予定（タイトル・日時・企業）が存在しないか確認する。
 - **Traceability**: 予定の根拠となったメールの subject, date, id は必ず本文に追記する。
 
+### Tool Usage Notes
+- `notion_task_list_records` は既定で `include_completed=False`（完了タスクは除外）。
+- 完了タスクも重複確認対象にしたい場合のみ `include_completed=True` を明示する。
+- 就活予定の重複確認では `area="就活"` を必ず指定する。
+
 ## 4. Output Contract (ユーザー提示時)
 抽出結果は以下の形式で簡潔に提示し、登録の許可を求める。
 
