@@ -230,6 +230,7 @@ def action_get_many(company_names: list[str]):
 def _query_datasource_pages(
     page_size: int | None = None,
     start_cursor: str | None = None,
+    filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     データソースに紐づくページをクエリする．ページネーションに対応
@@ -245,6 +246,8 @@ def _query_datasource_pages(
         query["page_size"] = page_size
     if start_cursor:
         query["start_cursor"] = start_cursor
+    if filter is not None:
+        query["filter"] = filter
 
     query["data_source_id"] = data_source_id
     return cast(dict[str, Any], notion.data_sources.query(**query))
@@ -359,6 +362,7 @@ def _find_pages_by_titles(pages: list[dict[str, Any]], title_queries: list[str])
 
 
 def _extract_page_title(page: dict[str, Any]) -> str:
+    """Notion APIのクエリ結果からページタイトルを抽出する"""
     props = page.get("properties", {})
     if not isinstance(props, dict):
         return ""

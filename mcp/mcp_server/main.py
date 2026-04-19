@@ -166,17 +166,27 @@ def gmail_search_emails(
 
 # ── Task Database Tools ──────────────────────────────────────────
 
-@mcp.tool(name="notion_task_list_records", description="List records from Notion task DB")
+@mcp.tool(
+    name="notion_task_list_records",
+    description=(
+        "List records from Notion task DB. "
+        "Use include_completed=False to hide 完了 items and area='就活' to narrow by area."
+    ),
+)
 def notion_task_list_records(
     page_size: int = 50,
     start_cursor: str | None = None,
     title_contains: str | None = None,
+    include_completed: bool = False,
+    area: str | None = None,
 ) -> dict[str, Any]:
     return _as_dict(
         task_db.action_list_records(
             page_size=page_size,
             start_cursor=start_cursor,
             title_contains=title_contains,
+            include_completed=include_completed,
+            area=area,
         )
     )
 
@@ -188,9 +198,10 @@ def notion_task_get_schema() -> dict[str, Any]:
 @mcp.tool(
     name="notion_add_task",
     description=(
-        "Create a new task in Notion Task DB. "
+        "Create a new generic task in Notion Task DB. "
+        "Use notion_add_job_task for job-hunting tasks that must be tagged as エリア=就活. "
         "properties supports profile-based fields, e.g. "
-        "{'カテゴリ':['選考'],'日付':{'start':'2026-04-23'},'企業':[{'id':'<page_id>'}]}"
+        "{'カテゴリ':['選考'],'日付':{'start':'2026-04-23'},'企業':[{'id':'<page_id>'}] }"
     ),
 )
 def notion_add_task(
@@ -198,6 +209,21 @@ def notion_add_task(
     properties: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return _as_dict(task_db.action_add_task(title=title, properties=properties))
+
+
+@mcp.tool(
+    name="notion_add_job_task",
+    description=(
+        "Create a job-hunting task in Notion Task DB. "
+        "This tool always forces エリア='就活' regardless of input properties. "
+        "Use this for all 就活 task creation flows."
+    ),
+)
+def notion_add_job_task(
+    title: str,
+    properties: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _as_dict(task_db.action_add_job_task(title=title, properties=properties))
 
 @mcp.tool(
     name="notion_update_task",

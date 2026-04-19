@@ -85,6 +85,7 @@
         "notion_task_list_records",
         "notion_task_get_schema",
         "notion_add_task",
+        "notion_add_job_task",
         "notion_update_task",
         "notion_append_task_content",
         "gmail_search_emails",

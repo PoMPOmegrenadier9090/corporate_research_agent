@@ -10,7 +10,7 @@ description: メールの予定抽出からユーザー確認を経て、Notion 
 2. **Extract & Present**: メール本文から 日時・企業・イベント名・URL を抽出し，ユーザーに提示．追加の許可を得る．
 4. **Company Resolution**: `notion_search_company()` で企業IDを取得．この際，日本語名とともに英語名をaliasesに含める (マッチ複数時は尤もらしいものを選択．該当なし時は設定を省略)
 3. **Schema Check**: `notion_task_get_schema()` を実行し、使用可能なプロパティ名と型(`multi_select`, `date`, `relation`等)を**絶対の基準**とする
-5. **Create**: ユーザー許可後、重複確認(`notion_task_list_records`)の上、`notion_add_task` を実行．この際，**確認できた情報に関してはスキーマに従ってプロパティ設定する**
+5. **Create**: ユーザー許可後、重複確認(`notion_task_list_records`)の上、`notion_add_job_task` を実行．この際，**確認できた情報に関してはスキーマに従ってプロパティ設定する**
 6. **Append Notes**: `notion_append_task_content` で概要、参考URL、根拠メール(subject/date/id)を追記
 
 
@@ -19,13 +19,13 @@ description: メールの予定抽出からユーザー確認を経て、Notion 
 
 | 型 | 設定方法・フォーマット | 備考 |
 | --- | --- | --- |
-| **Title** | `notion_add_task(title="...")` | `properties`の中ではなく引数で直接指定 |
+| **Title** | `notion_add_job_task(title="...")` | `properties`の中ではなく引数で直接指定 |
 | **multi_select** | `{"カテゴリ": ["選考"]}` | `options`に完全一致する値のみ指定可 |
 | **date** | `{"日付": "2026-04-23"}`<br>時間指定: `{"日付": {"start": "2026-04-23T23:59", "time_zone": "Asia/Tokyo"}}` | 形式に注意 |
 | **relation** | `{"企業": {"id": "<page_id>"}}` | 該当企業が存在しない場合はこのプロパティ設定自体を省略し、本文に企業名を記載 |
 
 ## 3. Mandatory Rules
-- **No Implicit Write**: ユーザーの明示指示前に `notion_add_task` を決して呼ばない。
+- **No Implicit Write**: ユーザーの明示指示前に `notion_add_job_task` を決して呼ばない。
 - **Strict Schema**: エラー時は必ずスキーマを再確認し、存在しない項目や選択肢を設定しない。
 - **Dedup Before Create**: 作成前に同一予定（タイトル・日時・企業）が存在しないか確認する。
 - **Traceability**: 予定の根拠となったメールの subject, date, id は必ず本文に追記する。

@@ -8,6 +8,7 @@
     "日付": "date",
     "企業": "relation",
     "エピソード": "relation",
-    "file": "files"
+    "file": "files",
+    "エリア": "select"
   }
 }
