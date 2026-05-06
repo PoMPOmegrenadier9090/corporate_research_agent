@@ -8,3 +8,4 @@ __pycache__
 !.gemini/GEMINI.md
 !.gemini/skills
 !.gemini/skills/**
+!.gemini/policies
