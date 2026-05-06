@@ -1,0 +1,14 @@
+[[rule]]
+toolName = [      
+    "list_directory",
+    "read_file",
+    "read_many_files",
+    "write_file",
+    "replace",
+    "glob",
+    "grep_search",
+    "ask_user"
+    ]
+decision = "deny"
+priority = 999
+denyMessage = "The read/write tools for the directory is not allowed. You must not and don't need to search the codebase."

@@ -39,21 +39,12 @@
     },
     "core": [
       "web_fetch",
-      "web_fetch",
       "save_memory",
       "write_todos",
       "activate_skill",
-      "complete_task"
-    ],
-    "exclude": [
-      "list_directory",
-      "read_file",
-      "read_many_files",
-      "write_file",
-      "replace",
-      "glob",
-      "grep_search",
-      "ask_user"
+      "complete_task",
+      "list_mcp_resources",
+      "read_mcp_resource"
     ]
   },
   "model": {

@@ -1,6 +1,6 @@
 ---
 name: fetch-page
-description: 指定されたURLのウェブページにアクセスし、JINA AI リーダー APIを経由して不要な要素を省いた綺麗なマークダウンテキスト（コンテンツ本文）を取得します。
+description: 指定されたURLのウェブページにアクセスし，不要な要素を省いた綺麗なマークダウンテキストを取得します．`web_fetch`では取得が困難な場合に使用します．
 ---
 
 # Fetch Page Tool (JINA AI Reader)

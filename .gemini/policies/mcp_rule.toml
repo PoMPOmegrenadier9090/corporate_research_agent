@@ -1,0 +1,5 @@
+[[rule]]
+mcpName = "agent-tools"
+toolName = "*"
+decision = "allow"
+priority = 900
