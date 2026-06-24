@@ -1,16 +1,4 @@
 services:
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: chromadb
-    environment:
-      - IS_PERSISTENT=TRUE
-      - ANONYMIZED_TELEMETRY=FALSE
-    volumes:
-      - ./chroma_data:/data
-    expose:
-      - "8000"
-    restart: unless-stopped
-
   mcp-tools:
     build:
       context: ./mcp
@@ -24,52 +12,9 @@ services:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=9001
       - MCP_PATH=/mcp
-      - CHROMA_HOST=chromadb
-      - CHROMA_PORT=8000
     command: uv run -m mcp_server.main
     volumes:
       - ./mcp:/app
-    expose:
-      - "9001"
-    depends_on:
-      - chromadb
-    restart: unless-stopped
-
-  gemini-agent:
-    build:
-      context: ./agent
-      dockerfile: Dockerfile.agent
-    image: gemini-agent
-    container_name: gemini-agent
-    init: true
-    environment:
-      - TERM=xterm-256color
-      - NO_PROXY=localhost,127.0.0.1,mcp-tools
-      - no_proxy=localhost,127.0.0.1,mcp-tools
-    command: uv run uvicorn api:app --host 0.0.0.0 --port 8000
-    volumes:
-      - ./.gemini:/root/.gemini # 認証情報・設定ファイルをホストと共有
-      - ./agent:/app # アプリコードをホストと共有
     ports:
-      - "8000:8000"
-    depends_on:
-      - mcp-tools
-    restart: unless-stopped
-  discord-bot:
-    build:
-      context: ./bot
-      dockerfile: Dockerfile.bot
-    image: discord-bot
-    container_name: discord-bot
-    command: watchmedo auto-restart --directory=. --pattern='*.py' --ignore-patterns='*sessions.db*' --recursive -- python bot.py
-    environment:
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - API_URL=http://gemini-agent:8000/ask
-      # Ensure it loads env too if needed, but token is passed.
-    env_file:
-      - .env
-    volumes:
-      - ./bot:/app
-    depends_on:
-      - gemini-agent
+      - "9001:9001"
     restart: unless-stopped

@@ -11,7 +11,3 @@ __pycache__
 !.gemini/policies
 
 data
-
-bot/sessions.db
-
-chroma_data/
