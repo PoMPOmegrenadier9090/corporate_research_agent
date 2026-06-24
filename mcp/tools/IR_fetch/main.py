@@ -1,111 +1,114 @@
 import argparse
-import time
-import requests
-from bs4 import BeautifulSoup
-import re
 import json
+import os
 import sys
 from pathlib import Path
 
-# __file__ が agent/tools/IR_fetch/main.py なので agent/tools をパスに追加
+import requests
+
 sys.path.append(str(Path(__file__).parent.parent))
 from logger import log_action
 
-from normalize_financials.parser import parse_financial_value
+JQUANTS_BASE = "https://api.jquants.com/v2"
 
-INDICATORS = {
-    "c_1": "売上高",
-    "c_2": "営業利益",
-    "c_3": "当期純利益",
-    "c_29": "営業利益率",
-    "c_6": "ROE",
-    "c_7": "ROA",
-    "c_11": "株主資本比率",
-    "c_14": "有利子負債比率",
-    "c_16": "営業CF",
-    "c_19": "フリーCF"
-}
 
-def extract_year(dt_text):
-    # YYYY/MM 形式を抽出して YYYY-MM に変換
-    match = re.search(r'(\d{4})/(\d{2})', dt_text)
-    if not match:
+def _f(value) -> float | None:
+    if value is None or value == "":
         return None
-    return f"{match.group(1)}-{match.group(2)}"
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
 
-def fetch_data(stock_code):
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-    })
-    
-    # 1. Search page
-    search_url = f"https://irbank.net/search/{stock_code}"
-    res = session.get(search_url)
-    if res.status_code != 200:
-        return {"error": f"Failed to fetch search page. Status code {res.status_code}"}
-        
-    soup = BeautifulSoup(res.text, 'lxml')
-    # Find the link to EDINET results
-    edinet_link = None
-    for a in soup.find_all('a'):
-        if a.text == '決算' and 'results' in a.get('href', ''):
-            edinet_link = a['href']
+
+def fetch_data(stock_code: str) -> dict:
+    api_key = os.environ.get("J_QUANTS_API_KEY", "")
+    if not api_key:
+        return {"error": "J_QUANTS_API_KEY is not set"}
+
+    headers = {"x-api-key": api_key}
+    params: dict = {"code": stock_code}
+    all_data = []
+
+    while True:
+        res = requests.get(
+            f"{JQUANTS_BASE}/fins/summary",
+            headers=headers,
+            params=params,
+            timeout=15,
+        )
+        if res.status_code != 200:
+            return {"error": f"J-Quants API error: {res.status_code} {res.text}"}
+
+        d = res.json()
+        all_data.extend(d.get("data", []))
+        pagination_key = d.get("pagination_key")
+        if not pagination_key:
             break
-            
-    if not edinet_link:
-        return {"error": f"Could not find exact result page link for code {stock_code}"}
-        
-    time.sleep(1.5)
-    
-    # 2. Results page
-    results_url = f"https://irbank.net{edinet_link}"
-    res2 = session.get(results_url)
-    if res2.status_code != 200:
-        return {"error": f"Failed to fetch results page. Status code {res2.status_code}"}
-        
-    soup2 = BeautifulSoup(res2.text, 'lxml')
-    output_data = {}
-    
-    for code, name in INDICATORS.items():
-        div = soup2.find('div', id=code)
-        if not div:
-            continue
-        dl = div.find('dl', class_='gdl')
-        if not dl:
-            continue
-        
-        dts = dl.find_all('dt')
-        dds = dl.find_all('dd')
-        
-        metric_data = {}
-        for dt, dd in zip(dts, dds):
-            year = extract_year(dt.get_text())
-            if not year:
-                continue
-                
-            text_span = dd.find('span', class_='text')
-            if text_span:
-                val_text = text_span.get_text()
-            else:
-                val_text = dd.get_text()
-                
-            val = parse_financial_value(val_text)
-            metric_data[year] = val
-            
-        # 直近5年分を取得（YYYY-MM形式なので文字列ソートで正しく並ぶ）
-        sorted_years = sorted(metric_data.keys())
-        last_5 = sorted_years[-5:]
-        
-        output_data[name] = { y: metric_data[y] for y in last_5 }
-        
-    return output_data
+        params["pagination_key"] = pagination_key
+
+    # 通期（FY）のみ
+    annual = [s for s in all_data if s.get("CurPerType") == "FY"]
+
+    # 連結があれば連結だけに絞る
+    consolidated = [s for s in annual if "Consolidated" in s.get("DocType", "")]
+    if consolidated:
+        annual = consolidated
+
+    # 会計年度末日でソートして直近5件
+    annual_sorted = sorted(annual, key=lambda s: s.get("CurFYEn", ""))
+    last_5 = annual_sorted[-5:]
+
+    if not last_5:
+        return {"error": f"No annual financial data found for code {stock_code}"}
+
+    output: dict = {}
+
+    for s in last_5:
+        fy_end = s.get("CurFYEn", "")[:7]  # YYYY-MM
+
+        net_sales    = _f(s.get("Sales"))
+        op_profit    = _f(s.get("OP"))
+        profit       = _f(s.get("NP"))
+        total_assets = _f(s.get("TA"))
+        equity       = _f(s.get("Eq"))
+        op_cf        = _f(s.get("CFO"))
+        inv_cf       = _f(s.get("CFI"))
+        eq_ratio     = _f(s.get("EqAR"))  # 0.0–1.0
+
+        def set_val(key, val):
+            if val is not None:
+                output.setdefault(key, {})[fy_end] = val
+
+        set_val("売上高", net_sales)
+        set_val("営業利益", op_profit)
+        set_val("当期純利益", profit)
+
+        if op_profit is not None and net_sales:
+            set_val("営業利益率", round(op_profit / net_sales * 100, 2))
+
+        if profit is not None and equity:
+            set_val("ROE", round(profit / equity * 100, 2))
+
+        if profit is not None and total_assets:
+            set_val("ROA", round(profit / total_assets * 100, 2))
+
+        if eq_ratio is not None:
+            set_val("株主資本比率", round(eq_ratio * 100, 2))
+
+        set_val("営業CF", op_cf)
+
+        if op_cf is not None and inv_cf is not None:
+            set_val("フリーCF", op_cf + inv_cf)
+
+    return output
+
 
 if __name__ == "__main__":
     log_action("IR_fetch", sys.argv[1:])
-    parser = argparse.ArgumentParser(description="Fetch and parse 5-year financial data from IRBANK.")
+    parser = argparse.ArgumentParser(description="Fetch 5-year financial data via J-Quants API V2.")
     parser.add_argument("--code", type=str, required=True, help="Stock code (e.g. 7203)")
     args = parser.parse_args()
-    
+
     result = fetch_data(args.code)
     print(json.dumps(result, ensure_ascii=False, indent=2))

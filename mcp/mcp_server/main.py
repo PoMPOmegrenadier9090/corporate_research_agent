@@ -37,7 +37,7 @@ def fetch_page(url: str) -> dict[str, Any]:
     return _as_dict(fetch_page_impl(url))
 
 
-@mcp.tool(name="ir_fetch", description="Fetch latest 5-year financial metrics from IRBANK by stock code")
+@mcp.tool(name="ir_fetch", description="Fetch up to 2-year annual financial metrics (売上高・営業利益・ROE・ROA・CF etc.) from J-Quants API by stock code. Consolidated figures preferred. Amounts in JPY, ratios in percent.")
 def ir_fetch(stock_code: str) -> dict[str, Any]:
     return _as_dict(ir_fetch_impl(stock_code))
 
